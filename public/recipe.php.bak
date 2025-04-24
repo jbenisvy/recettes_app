@@ -1,0 +1,161 @@
+<?php
+require_once __DIR__ . '/../config/db.php';
+session_start();
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    header('Location: search.php'); exit;
+}
+$db = require __DIR__ . '/../config/db.php';
+$pdo = new PDO("mysql:host={$db['host']};dbname={$db['dbname']};charset={$db['charset']}", $db['user'], $db['pass']);
+$id = intval($_GET['id']);
+$stmt = $pdo->prepare('SELECT recipes.*, categories.name AS category, users.username FROM recipes LEFT JOIN categories ON recipes.category_id = categories.id LEFT JOIN users ON recipes.user_id = users.id WHERE recipes.id = ?');
+$stmt->execute([$id]);
+$recipe = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$recipe) { echo '<h2>Recette introuvable.</h2>'; exit; }
+// Récupérer les commentaires
+$comments = $pdo->prepare('SELECT comments.*, users.username FROM comments LEFT JOIN users ON comments.user_id = users.id WHERE recipe_id = ? ORDER BY created_at DESC');
+$comments->execute([$id]);
+$comments = $comments->fetchAll(PDO::FETCH_ASSOC);
+// Ajout de commentaire
+$commentMsg = '';
+if (isset($_SESSION['user_id']) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['content'], $_POST['rating'])) {
+    $content = trim($_POST['content']);
+    $rating = intval($_POST['rating']);
+    if ($content && $rating >= 1 && $rating <= 5) {
+        $stmt = $pdo->prepare('INSERT INTO comments (user_id, recipe_id, content, rating) VALUES (?, ?, ?, ?)');
+        $stmt->execute([$_SESSION['user_id'], $id, $content, $rating]);
+        header("Location: recipe.php?id=$id"); exit;
+    } else {
+        $commentMsg = "Remplis le commentaire et la note (1-5).";
+    }
+}
+// Gestion des favoris
+$is_favorite = false;
+if (isset($_SESSION['user_id'])) {
+    $fav = $pdo->prepare('SELECT id FROM favorites WHERE user_id = ? AND recipe_id = ?');
+    $fav->execute([$_SESSION['user_id'], $id]);
+    $is_favorite = $fav->fetch() ? true : false;
+    if (isset($_GET['fav'])) {
+        if ($_GET['fav'] === 'add' && !$is_favorite) {
+            $pdo->prepare('INSERT INTO favorites (user_id, recipe_id) VALUES (?, ?)')->execute([$_SESSION['user_id'], $id]);
+            header("Location: recipe.php?id=$id"); exit;
+        } elseif ($_GET['fav'] === 'del' && $is_favorite) {
+            $pdo->prepare('DELETE FROM favorites WHERE user_id = ? AND recipe_id = ?')->execute([$_SESSION['user_id'], $id]);
+            header("Location: recipe.php?id=$id"); exit;
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title><?php echo htmlspecialchars($recipe['title']); ?></title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<a class="btn" href="index.php" style="margin:16px 0 8px 0;display:inline-block;">&larr; Retour à l'accueil</a>
+<?php include 'navbar.php'; ?>
+<div class="recipe-container">
+    <?php if (isset($_SESSION['success_message'])): ?>
+        <div class="alert alert-success">
+            <?php 
+            echo htmlspecialchars($_SESSION['success_message']); 
+            unset($_SESSION['success_message']);
+            ?>
+        </div>
+    <?php endif; ?>
+
+    <h1><?php echo htmlspecialchars($recipe['title']); ?></h1>
+    <div style="margin-bottom:1em;">
+        <a href="print_recipe.php?id=<?php echo $id; ?>" target="_blank" class="no-print" style="margin-right:1em;">🖨️ Imprimer la recette</a>
+        <a href="shopping_list.php?id=<?php echo $id; ?>" target="_blank" class="no-print">🛒 Liste de courses</a>
+        <form method="get" action="shopping_list.php" style="display:inline;margin-left:2em;">
+            <input type="checkbox" name="id" value="<?php echo $id; ?>" checked style="vertical-align:middle;">
+            <button type="submit" class="no-print">🛒 Liste groupée</button>
+            <span style="font-size:0.95em; color:#888;">(cocher pour ajouter à la liste groupée)</span>
+        </form>
+    </div>
+    <?php
+    // Récupération des médias de la recette
+    $media_stmt = $pdo->prepare("SELECT * FROM recipe_media WHERE recipe_id = ? ORDER BY created_at");
+    $media_stmt->execute([$id]);
+    $medias = $media_stmt->fetchAll();
+    
+    if (!empty($medias)): ?>
+        <div class="recipe-media">
+            <h3>Photos et Vidéos</h3>
+            <div class="media-gallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+            <?php foreach ($medias as $media): ?>
+                <?php if ($media['media_type'] === 'image'): ?>
+                    <div class="media-item">
+                        <img src="<?php echo htmlspecialchars($media['file_path']); ?>" 
+                             alt="Photo de la recette" 
+                             style="max-width:100%; height:auto; border-radius:8px;">
+                    </div>
+                <?php elseif ($media['media_type'] === 'video'): ?>
+                    <div class="media-item">
+                        <video controls style="max-width:100%; border-radius:8px;">
+                            <source src="<?php echo htmlspecialchars($media['file_path']); ?>" type="video/mp4">
+                            Votre navigateur ne supporte pas la lecture de vidéos.
+                        </video>
+                    </div>
+                <?php endif; ?>
+            <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+    <p><strong>Catégorie :</strong> <?php echo htmlspecialchars($recipe['category']); ?></p>
+    <p><strong>Par :</strong> <?php echo htmlspecialchars($recipe['username']); ?></p>
+    <p><strong>Difficulté :</strong> <?php echo htmlspecialchars($recipe['difficulty']); ?> | <strong>Préparation :</strong> <?php echo (int)$recipe['prep_time']; ?> min | <strong>Cuisson :</strong> <?php echo (int)$recipe['cook_time']; ?> min</p>
+    <h3>Description</h3>
+    <p><?php echo nl2br(htmlspecialchars($recipe['description'])); ?></p>
+    <h3>Ingrédients</h3>
+    <ul>
+        <?php
+        $ings = $pdo->prepare('SELECT ri.quantity, ri.unit, i.name FROM recipe_ingredients ri JOIN ingredients i ON ri.ingredient_id = i.id WHERE ri.recipe_id = ?');
+        $ings->execute([$id]);
+        foreach ($ings as $ing) {
+            echo '<li>' . htmlspecialchars($ing['name']);
+            if ($ing['quantity'] || $ing['unit']) {
+                echo ' : <strong>' . htmlspecialchars($ing['quantity']) . ' ' . htmlspecialchars($ing['unit']) . '</strong>';
+            }
+            echo '</li>';
+        }
+        ?>
+    </ul>
+    <h3>Étapes</h3>
+    <ol><?php foreach (explode("\n", $recipe['steps']) as $step) echo '<li>' . htmlspecialchars($step) . '</li>'; ?></ol>
+    <?php if (isset($_SESSION['user_id'])): ?>
+        <form method="get" style="display:inline;">
+            <input type="hidden" name="id" value="<?php echo $id; ?>">
+            <?php if ($is_favorite): ?>
+                <button type="submit" name="fav" value="del">Retirer des favoris</button>
+            <?php else: ?>
+                <button type="submit" name="fav" value="add">Ajouter aux favoris</button>
+            <?php endif; ?>
+        </form>
+    <?php endif; ?>
+    <hr>
+    <h3>Commentaires</h3>
+    <?php foreach ($comments as $c): ?>
+        <div class="comment">
+            <strong><?php echo htmlspecialchars($c['username']); ?></strong> (<?php echo (int)$c['rating']; ?>/5) :<br>
+            <?php echo nl2br(htmlspecialchars($c['content'])); ?>
+            <div style="font-size:0.9em;color:#888;">Posté le <?php echo $c['created_at']; ?></div>
+        </div>
+    <?php endforeach; ?>
+    <?php if (isset($_SESSION['user_id'])): ?>
+        <h4>Laisser un commentaire</h4>
+        <?php if ($commentMsg) echo '<div class="error">'.$commentMsg.'</div>'; ?>
+        <form method="post">
+            <textarea name="content" placeholder="Votre commentaire" required></textarea><br>
+            <label>Note : <select name="rating">
+                <?php for ($i=1; $i<=5; $i++) echo "<option value='$i'>$i</option>"; ?>
+            </select>/5</label><br>
+            <button type="submit">Envoyer</button>
+        </form>
+    <?php endif; ?>
+</div>
+</body>
+</html>

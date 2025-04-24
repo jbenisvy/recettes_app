@@ -1,0 +1,38 @@
+<?php
+session_start();
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>Accueil - Gestion des Recettes</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+
+</head>
+<body>
+<!-- Bouton retour à l'accueil (sauf sur l'accueil) -->
+    <?php include 'navbar.php'; ?>
+    <?php if (isset($_GET['deleted']) && $_GET['deleted'] == 1): ?>
+    <div class="success">Recette supprimée avec succès !</div>
+    <?php endif; ?>
+    <div class="container">
+        <h1>Bienvenue sur l'application de gestion de recettes !</h1>
+        <div class="welcome">
+            <?php if (isset($_SESSION['user_id'])): ?>
+                Bonjour <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong> !<br>
+                Navigue dans le menu ci-dessus pour gérer tes recettes, tes favoris ou ton profil.
+            <?php else: ?>
+                Crée un compte ou connecte-toi pour ajouter et gérer tes recettes, ou explore celles déjà partagées !
+            <?php endif; ?>
+        </div>
+        <ul>
+            <li><strong>Recherche de recettes</strong> : filtre par ingrédients, catégories, temps, difficulté…</li>
+            <li><strong>Ajout/modification/suppression</strong> de recettes avec photo</li>
+            <li><strong>Favoris, commentaires, notes</strong> et partage de recettes</li>
+            <li><strong>Génération automatique</strong> d'une liste de courses</li>
+        </ul>
+        <a class="btn" href="search.php">Commencer à explorer les recettes</a>
+    </div>
+</body>
+</html>
