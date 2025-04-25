@@ -1,0 +1,5 @@
+/config/db.php
+/vendor/
+*.log
+/images/
+/videos/
