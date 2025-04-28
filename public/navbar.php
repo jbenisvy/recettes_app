@@ -2,6 +2,11 @@
 // Barre de navigation réutilisable
 if (session_status() === PHP_SESSION_NONE) session_start();
 ?>
+<div style="text-align:right; padding:10px;">
+    <?php if (isset($_SESSION['username'])): ?>
+        Connecté en tant que <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong>
+    <?php endif; ?>
+</div>
 <nav class="navbar">
     <div class="navbar-logo">
         <a href="index.php" aria-label="Accueil">
