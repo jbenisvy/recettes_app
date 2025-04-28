@@ -9,15 +9,20 @@ $pdo = new PDO("mysql:host={$db['host']};dbname={$db['dbname']};charset={$db['ch
 
 $error = '';
 if (isset($_POST['username'], $_POST['password'])) {
-    $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ? LIMIT 1');
-    $stmt->execute([$_POST['username']]);
+    $login = $_POST['username'];
+    $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1');
+    $stmt->execute([$login, $login]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($user && password_verify($_POST['password'], $user['password']) && !empty($user['is_admin'])) {
+    if (!$user) {
+        $error = "Utilisateur non trouvé (username/email: $login)";
+    } elseif (!password_verify($_POST['password'], $user['password'])) {
+        $error = "Mot de passe incorrect.";
+    } elseif (empty($user['admin'])) {
+        $error = "Ce compte n'a pas les droits administrateur.";
+    } else {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['is_admin'] = true;
         header('Location: dashboard.php'); exit;
-    } else {
-        $error = "Identifiants incorrects ou accès non autorisé.";
     }
 }
 ?>
@@ -45,6 +50,7 @@ if (isset($_POST['username'], $_POST['password'])) {
         <input type="password" name="password" placeholder="Mot de passe" required>
         <button type="submit">Connexion</button>
     </form>
+    <a href="/index.php" class="btn" style="display:block;margin:16px auto 0 auto;width:fit-content;">&larr; Retour à l'accueil</a>
 </div>
 </body>
 </html>

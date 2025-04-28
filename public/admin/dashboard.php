@@ -1,8 +1,8 @@
 <?php
 session_start();
 if (empty($_SESSION['user_id']) || empty($_SESSION['is_admin'])) {
-    require_once __DIR__ . '/../../config/db.php';
-    header('Location: login.php'); exit;
+    echo '<div style="background:#fff;color:#b22;padding:24px;text-align:center;font-size:1.2em;">Accès refusé : vous devez être administrateur pour accéder à ce tableau de bord.<br><a href="/login.php">Se connecter</a></div>';
+    exit;
 }
 ?>
 <!DOCTYPE html>

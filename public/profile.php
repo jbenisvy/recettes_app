@@ -43,16 +43,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Format ou taille de fichier non valide.';
         }
     }
+    // Gestion du changement de mot de passe
+    $new_password = $_POST['new_password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
+    if (!empty($new_password) || !empty($confirm_password)) {
+        if ($new_password !== $confirm_password) {
+            $errors[] = 'Les mots de passe ne correspondent pas.';
+        } elseif (strlen($new_password) < 6) {
+            $errors[] = 'Le mot de passe doit contenir au moins 6 caractères.';
+        }
+    }
+
     if (empty($errors)) {
         // Gestion admin (l'utilisateur peut modifier son propre statut admin)
-        $is_admin = $user['is_admin'];
+        $is_admin = $user['admin'];
         if ($_SESSION['user_id'] == $user['id']) {
-            $is_admin = isset($_POST['is_admin']) ? 1 : 0;
+            $is_admin = isset($_POST['admin']) ? 1 : 0;
         }
-        $stmt = $pdo->prepare('UPDATE users SET username=?, email=?, avatar=?, is_admin=? WHERE id=?');
-        $stmt->execute([$username, $email, $avatar, $is_admin, $user_id]);
+        if (!empty($new_password)) {
+            $hashed = password_hash($new_password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare('UPDATE users SET username=?, email=?, avatar=?, admin=?, password=? WHERE id=?');
+            $stmt->execute([$username, $email, $avatar, $is_admin, $hashed, $user_id]);
+        } else {
+            $stmt = $pdo->prepare('UPDATE users SET username=?, email=?, avatar=?, admin=? WHERE id=?');
+            $stmt->execute([$username, $email, $avatar, $is_admin, $user_id]);
+        }
         $_SESSION['username'] = $username;
         $_SESSION['is_admin'] = $is_admin;
+        // Rechargement des données utilisateur après mise à jour
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
+        $stmt->execute([$user_id]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
         header('Location: profile.php?updated=1');
         exit;
     }
@@ -94,8 +115,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="avatar">Avatar</label>
             <input type="file" id="avatar" name="avatar" accept="image/*">
             <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $user['id']): ?>
-                <label class="admin-checkbox"><input type="checkbox" name="is_admin" value="1" <?php if (isset($user['is_admin']) && $user['is_admin']) echo 'checked'; ?>> Administrateur</label>
+                <label class="admin-checkbox"><input type="checkbox" name="admin" value="1" <?php if (isset($user['admin']) && $user['admin']) echo 'checked'; ?>> Administrateur</label>
             <?php endif; ?>
+            <label for="new_password">Nouveau mot de passe</label>
+            <input type="password" id="new_password" name="new_password" autocomplete="new-password">
+            <label for="confirm_password">Confirmer le mot de passe</label>
+            <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password">
             <button type="submit" class="btn">Mettre à jour</button>
         </form>
     </div>

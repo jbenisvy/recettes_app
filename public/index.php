@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config/db.php';
 
 // Connexion à la base de données
@@ -40,7 +44,7 @@ ob_start(); ?>
     <p class="welcome-text">Découvrez, partagez et organisez vos recettes préférées.</p>
     <p class="welcome-text"><strong>Nombre de visites pour cette page : <?php echo (int)$views; ?></strong></p>
     <a href="add_recipe.php" class="hero-btn">+ Ajouter une recette</a>
-    <a href="/admin/login.php" class="hero-btn" style="background:#3e4a5e;margin-left:10px;">Espace Admin</a>
+    <a href="/admin/dashboard.php" class="hero-btn" style="background:#3e4a5e;margin-left:10px;">Espace Admin</a>
 </div>
 
 <section class="latest-recipes">
