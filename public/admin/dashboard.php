@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (empty($_SESSION['user_id']) || empty($_SESSION['is_admin'])) {
-    echo '<div style="background:#fff;color:#b22;padding:24px;text-align:center;font-size:1.2em;">Accès refusé : vous devez être administrateur pour accéder à ce tableau de bord.<br><a href="/login.php">Se connecter</a></div>';
+    echo '<div style="background:#fff;color:#b22;padding:24px;text-align:center;font-size:1.2em;">Accès refusé : vous devez être administrateur pour accéder à ce tableau de bord.<br><a href="../login.php">Se connecter</a></div>';
     exit;
 }
 ?>
@@ -10,7 +10,7 @@ if (empty($_SESSION['user_id']) || empty($_SESSION['is_admin'])) {
 <head>
     <meta charset="UTF-8">
     <title>Admin - Tableau de bord</title>
-    <link rel="stylesheet" href="/css/home.css">
+    <link rel="stylesheet" href="../css/home.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;400&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
         body {
@@ -119,7 +119,7 @@ if (empty($_SESSION['user_id']) || empty($_SESSION['is_admin'])) {
 <div class="admin-header">
     <span class="icon">&#128295;</span>
     <h1>Espace Administration</h1>
-    <a href="index.php" class="btn-site">&larr; Retour au site</a>
+    <a href="../index.php" class="btn-site">&larr; Retour au site</a>
 </div>
 <div class="admin-dashboard">
     <div class="welcome">Bienvenue dans le tableau de bord administrateur.<br>Gérez toutes les fonctionnalités de votre site depuis cet espace sécurisé.</div>

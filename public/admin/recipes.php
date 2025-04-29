@@ -22,7 +22,7 @@ $recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <title>Admin - Recettes</title>
-    <link rel="stylesheet" href="/css/home.css">
+    <link rel="stylesheet" href="../css/home.css">
     <style>
         body { background: #f4f8fb; font-family: 'Poppins', sans-serif; }
         .admin-content { max-width: 900px; margin: 50px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(44,124,123,0.11); padding: 32px 28px; }
@@ -37,7 +37,7 @@ $recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
 <div class="admin-header">
     <span class="icon">&#127968;</span>
-    <a href="/index.php" class="btn-home">Accueil du site</a>
+    <a href="../index.php" class="btn-home">Accueil du site</a>
     <span class="header-title">Gestion des recettes</span>
 </div>
 <div class="admin-content">

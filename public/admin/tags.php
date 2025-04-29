@@ -48,7 +48,7 @@ if (isset($_POST['edit_tag_id'], $_POST['edit_tag_name'])) {
 <head>
     <meta charset="UTF-8">
     <title>Admin - Tags</title>
-    <link rel="stylesheet" href="/css/home.css">
+    <link rel="stylesheet" href="../css/home.css">
     <style>
         .admin-header { background: #2c7c7b; color: #fff; padding: 16px 0 12px 0; border-radius: 0 0 24px 24px; box-shadow: 0 4px 18px rgba(44,124,123,0.13); display: flex; align-items: center; gap: 18px; }
         .admin-header .icon { font-size: 2.2em; margin-left: 28px; }
@@ -73,7 +73,7 @@ if (isset($_POST['edit_tag_id'], $_POST['edit_tag_name'])) {
 <body>
 <div class="admin-header">
     <span class="icon">🏷️</span>
-    <a href="/index.php" class="btn-home">Accueil du site</a>
+    <a href="../index.php" class="btn-home">Accueil du site</a>
     <span class="header-title">Gestion des tags</span>
 </div>
 <div class="admin-content">
