@@ -119,7 +119,7 @@ if (empty($_SESSION['user_id']) || empty($_SESSION['is_admin'])) {
 <div class="admin-header">
     <span class="icon">&#128295;</span>
     <h1>Espace Administration</h1>
-    <a href="/index.php" class="btn-site">&larr; Retour au site</a>
+    <a href="index.php" class="btn-site">&larr; Retour au site</a>
 </div>
 <div class="admin-dashboard">
     <div class="welcome">Bienvenue dans le tableau de bord administrateur.<br>Gérez toutes les fonctionnalités de votre site depuis cet espace sécurisé.</div>
