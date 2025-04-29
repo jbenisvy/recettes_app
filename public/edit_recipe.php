@@ -8,6 +8,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 }
 $db = require __DIR__ . '/../config/db.php';
 $pdo = new PDO("mysql:host={$db['host']};dbname={$db['dbname']};charset={$db['charset']}", $db['user'], $db['pass']);
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); // Affiche les erreurs SQL
 $id = intval($_GET['id']);
 $stmt = $pdo->prepare('SELECT * FROM recipes WHERE id = ?');
 $stmt->execute([$id]);
@@ -38,6 +39,8 @@ $media_stmt->execute([$id]);
 $media = $media_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // DEBUG : log du POST pour analyse
+    file_put_contents('/tmp/debug_edit_recipe.txt', print_r($_POST, true));
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $ingredients = trim($_POST['ingredients'] ?? '');
@@ -116,8 +119,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=? AND user_id=?");
-        $stmt->execute([$title, $description, $ingredients, $steps, $category_id, $prep_time, $cook_time, $difficulty, $id, $_SESSION['user_id']]);
+        // Correction : autoriser la modification par admin
+        if (!empty($_SESSION['is_admin']) && $_SESSION['is_admin']) {
+            $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=?");
+            $stmt->execute([$title, $description, $ingredients, $steps, $category_id, $prep_time, $cook_time, $difficulty, $id]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=? AND user_id=?");
+            $stmt->execute([$title, $description, $ingredients, $steps, $category_id, $prep_time, $cook_time, $difficulty, $id, $_SESSION['user_id']]);
+        }
 
         // --- Synchronisation des tags dans recipe_tags ---
         $pdo->prepare('DELETE FROM recipe_tags WHERE recipe_id = ?')->execute([$id]);
@@ -383,6 +392,13 @@ addBtn.onclick = function() {
     select.value = '';
 };
 updateList();
+// Synchronisation finale avant soumission du formulaire
+const form = document.querySelector('form');
+if (form) {
+    form.addEventListener('submit', function(e) {
+        updateHidden(); // force la mise à jour du champ caché
+    });
+}
 </script>
 
 

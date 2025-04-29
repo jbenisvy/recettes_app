@@ -99,8 +99,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Enregistrement si pas d'erreurs
     if (empty($errors)) {
         try {
-            $pdo->beginTransaction();
+            // Vérification de l'unicité du titre pour cet utilisateur
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM recipes WHERE user_id = ? AND title = ?");
+            $stmt->execute([$_SESSION['user_id'], $title]);
+            if ($stmt->fetchColumn() > 0) {
+                $errors[] = 'Vous avez déjà une recette avec ce titre. Veuillez en choisir un autre.';
+                throw new Exception('Doublon de titre');
+            }
 
+            $pdo->beginTransaction();
             // Insertion de la recette
             $stmt = $pdo->prepare("INSERT INTO recipes (user_id, title, description, ingredients, steps, category_id, prep_time, cook_time, difficulty) VALUES (?, ?, ?, '', ?, ?, ?, ?, ?)");
             $stmt->execute([
@@ -115,6 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             
             $recipe_id = $pdo->lastInsertId();
+            // Astuce : pour une sécurité maximale, ajouter une contrainte UNIQUE(user_id, title) dans la base de données.
 
             // Insertion des médias
             if (!empty($media_files)) {
@@ -194,6 +202,7 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
     <?php include 'navbar.php'; ?>
     <div class="container">
         <h1>Ajouter une recette</h1>
+        <a href="import_recipe.php" class="btn btn-secondary" style="float:right;margin-bottom:10px;">Importer une recette depuis une URL</a>
         
         <?php if (!empty($errors)): ?>
             <div class="alert alert-danger">

@@ -5,6 +5,9 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 <div style="text-align:right; padding:10px;">
     <?php if (isset($_SESSION['username'])): ?>
         Connecté en tant que <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong>
+        <?php if (!empty($_SESSION['avatar'])): ?>
+            <img src="<?php echo htmlspecialchars($_SESSION['avatar']); ?>" alt="Avatar" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-left:6px;">
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 <nav class="navbar">

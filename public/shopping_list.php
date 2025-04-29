@@ -33,7 +33,9 @@ if (isset($_GET['add'], $_GET['id']) && is_numeric($_GET['id'])) {
     // Récupérer les ingrédients de la recette
     $ing_stmt = $pdo->prepare('SELECT ingredient_id, quantity, unit FROM recipe_ingredients WHERE recipe_id = ?');
     $ing_stmt->execute([$recipe_id]);
-    foreach ($ing_stmt as $ing) {
+    $debug_ings = $ing_stmt->fetchAll(PDO::FETCH_ASSOC);
+    file_put_contents('/tmp/debug_shopping_list.txt', "Ingrédients récupérés pour recette $recipe_id :\n" . print_r($debug_ings, true));
+    foreach ($debug_ings as $ing) {
         // Vérifier si déjà présent dans la liste
         $item_stmt = $pdo->prepare('SELECT quantity FROM shopping_list_items WHERE list_id = ? AND ingredient_id = ? AND unit = ?');
         $item_stmt->execute([$list_id, $ing['ingredient_id'], $ing['unit']]);
@@ -46,9 +48,11 @@ if (isset($_GET['add'], $_GET['id']) && is_numeric($_GET['id'])) {
         if ($existing_qty !== false) {
             $pdo->prepare('UPDATE shopping_list_items SET quantity = ?, unit = ? WHERE list_id = ? AND ingredient_id = ? AND unit = ?')
                 ->execute([$new_qty, $ing['unit'], $list_id, $ing['ingredient_id'], $ing['unit']]);
+            file_put_contents('/tmp/debug_shopping_list.txt', "UPDATE shopping_list_items : list_id=$list_id, ingredient_id=".$ing['ingredient_id'].", unit=".$ing['unit'].", quantity=$new_qty\n", FILE_APPEND);
         } else {
             $pdo->prepare('INSERT INTO shopping_list_items (list_id, ingredient_id, quantity, unit) VALUES (?, ?, ?, ?)')
                 ->execute([$list_id, $ing['ingredient_id'], $ing['quantity'], $ing['unit']]);
+            file_put_contents('/tmp/debug_shopping_list.txt', "INSERT shopping_list_items : list_id=$list_id, ingredient_id=".$ing['ingredient_id'].", unit=".$ing['unit'].", quantity=".$ing['quantity']."\n", FILE_APPEND);
         }
     }
     $_SESSION['success_message'] = "Ingrédients ajoutés à votre liste de courses !";
@@ -156,6 +160,10 @@ if (isset($_GET['id'])) {
         <a href="shopping_list.php?clear=1" class="btn btn-danger no-print" onclick="return confirm('Vider toute la liste de courses ?');">🗑️ Vider la liste</a>
         <?php endif; ?>
     </div>
+    <?php
+    // DEBUG : contenu de $ingredients juste avant affichage
+    file_put_contents('/tmp/debug_shopping_affichage.txt', print_r($ingredients, true));
+    ?>
     <?php if (empty($ingredients)) : ?>
         <div class="error" style="margin:24px 0;">Aucun ingrédient à afficher pour les recettes sélectionnées.</div>
     <?php else : ?>
