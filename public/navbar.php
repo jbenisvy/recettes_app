@@ -58,5 +58,24 @@ document.addEventListener('DOMContentLoaded', function() {
         toggle.addEventListener('click', toggleMenu);
         toggle.addEventListener('touchstart', toggleMenu);
     }
+    // Patch universel : empêcher tout submit/reload sur le bouton hamburger
+    toggle && toggle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        logDiv.innerText = 'Patch : reload bloqué (mousedown)';
+        setTimeout(function(){ logDiv.innerText = ''; }, 1500);
+        return false;
+    }, true);
+    toggle && toggle.addEventListener('mouseup', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }, true);
+    toggle && toggle.addEventListener('pointerdown', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }, true);
+
 });
 </script>
