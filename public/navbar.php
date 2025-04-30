@@ -16,7 +16,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
             <img src="https://img.icons8.com/fluency/40/000000/chef-hat.png" alt="Logo Chef" style="vertical-align:middle;">
         </a>
     </div>
-    <button class="navbar-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navbar-links">
+    <button class="navbar-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navbar-links">
         <span class="navbar-toggle-icon"></span>
     </button>
     <ul class="navbar-links" id="navbar-links">
@@ -36,12 +36,20 @@ if (session_status() === PHP_SESSION_NONE) session_start();
     </ul>
 </nav>
 <script>
-// Menu hamburger responsive
-const toggle = document.querySelector('.navbar-toggle');
-const links = document.getElementById('navbar-links');
-toggle && toggle.addEventListener('click', function() {
-    const expanded = this.getAttribute('aria-expanded') === 'true';
-    this.setAttribute('aria-expanded', !expanded);
-    links.classList.toggle('navbar-links-open');
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('navbar.js chargé'); // Pour debug mobile
+    const toggle = document.querySelector('.navbar-toggle');
+    const links = document.getElementById('navbar-links');
+    if (toggle && links) {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            const expanded = this.getAttribute('aria-expanded') === 'true';
+            this.setAttribute('aria-expanded', !expanded);
+            links.classList.toggle('navbar-links-open');
+            console.log('Menu hamburger cliqué, état:', !expanded);
+        });
+    } else {
+        console.log('navbar.js : éléments non trouvés');
+    }
 });
 </script>

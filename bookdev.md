@@ -29,9 +29,15 @@
 
 ## [2025-04-30] Correction menu mobile sur la page d'accueil
 
-- Ajout de l'inclusion de la barre de navigation (`navbar.php`) en haut de `index.php`.
-- Résout le bug où le menu n'était pas accessible sur mobile (seule la page d'accueil s'affichait sans navigation).
-- La navigation est désormais cohérente sur toutes les pages, y compris sur mobile.
+- Ajout de l'inclusion de la barre de navigation (`navbar.php`) en haut de `index.php` (étape précédente).
+- Correction : suppression de l'inclusion directe de `navbar.php` dans `index.php` (ligne 39).
+- L'inclusion se fait désormais uniquement via le template commun `base.php`, évitant la double barre de navigation et le bug d'affichage/interaction du menu sur mobile.
+- Résout le bug où le menu n'était pas accessible ou cliquable sur mobile (présence de deux icônes auparavant).
+- Ajout de `type="button"` au bouton hamburger pour éviter les comportements inattendus sur mobile.
+- Sécurisation du JavaScript du menu : encapsulation dans `DOMContentLoaded` pour garantir l'exécution après chargement du DOM.
+- Ajout de logs JS pour faciliter le debug sur mobile.
+- Prévention du comportement par défaut au clic (évite l'ouverture du menu contextuel du navigateur).
+- La navigation est désormais cohérente et fonctionnelle sur toutes les pages, y compris sur mobile.
 
 ## Objectif global
 Créer une application web complète de gestion de recettes de cuisine avec :
