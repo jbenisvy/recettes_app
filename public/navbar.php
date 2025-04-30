@@ -16,9 +16,13 @@ if (session_status() === PHP_SESSION_NONE) session_start();
             <img src="https://img.icons8.com/fluency/40/000000/chef-hat.png" alt="Logo Chef" style="vertical-align:middle;">
         </a>
     </div>
-    <button class="navbar-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navbar-links" autocomplete="off" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:none;border:none;z-index:9999;">
+    <div style="position:relative;display:inline-block;">
+    <button class="navbar-toggle" id="navbar-toggle-btn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navbar-links" autocomplete="off" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:none;border:none;z-index:2;position:relative;">
         <span class="navbar-toggle-icon" style="display:block;width:28px;height:28px;"></span>
     </button>
+    <!-- Zone rouge de debug superposée -->
+    <div id="debug-hotspot" style="position:absolute;top:0;left:0;width:48px;height:48px;background:rgba(255,0,0,0.25);border-radius:8px;z-index:3;"></div>
+</div>
     <ul class="navbar-links" id="navbar-links">
         <li><a href="index.php">Accueil</a></li>
         <li><a href="search.php">Recherche</a></li>
@@ -58,24 +62,30 @@ document.addEventListener('DOMContentLoaded', function() {
         toggle.addEventListener('click', toggleMenu);
         toggle.addEventListener('touchstart', toggleMenu);
     }
-    // Patch universel : empêcher tout submit/reload sur le bouton hamburger
-    toggle && toggle.addEventListener('mousedown', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        logDiv.innerText = 'Patch : reload bloqué (mousedown)';
-        setTimeout(function(){ logDiv.innerText = ''; }, 1500);
-        return false;
-    }, true);
-    toggle && toggle.addEventListener('mouseup', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }, true);
-    toggle && toggle.addEventListener('pointerdown', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }, true);
+    // Zone rouge superposée pour debug mobile
+    var hotspot = document.getElementById('debug-hotspot');
+    if (hotspot && links && toggle) {
+        hotspot.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var expanded = toggle.getAttribute('aria-expanded') === 'true';
+            toggle.setAttribute('aria-expanded', !expanded);
+            links.classList.toggle('navbar-links-open');
+            logDiv.innerText = 'HOTSPOT : menu hamburger cliqué';
+            setTimeout(function(){ logDiv.innerText = ''; }, 1500);
+            return false;
+        });
+        hotspot.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var expanded = toggle.getAttribute('aria-expanded') === 'true';
+            toggle.setAttribute('aria-expanded', !expanded);
+            links.classList.toggle('navbar-links-open');
+            logDiv.innerText = 'HOTSPOT : menu hamburger touch';
+            setTimeout(function(){ logDiv.innerText = ''; }, 1500);
+            return false;
+        });
+    }
 
 });
 </script>
