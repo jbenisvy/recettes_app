@@ -57,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form method="post">
         <input type="email" name="email" placeholder="Email" required><br>
         <input type="password" name="password" placeholder="Mot de passe" required><br>
+        <a href="forgot_password.php" style="color:#1976d2;text-decoration:underline;display:inline-block;margin-bottom:10px;">Mot de passe oublié&nbsp;?</a><br>
         <button type="submit">Se connecter</button>
     </form>
     <p>Pas encore de compte ? <a href="register.php">Inscription</a></p>

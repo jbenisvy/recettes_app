@@ -1,0 +1,18 @@
+-- MODELE DE MIGRATION SQL (ne pas exécuter)
+-- Copiez ce fichier pour créer vos propres migrations, puis adaptez-le.
+-- Nommez vos fichiers : AAAA_MM_JJ_description.sql
+
+-- Exemple d'ajout de colonne
+-- ALTER TABLE nom_de_la_table ADD COLUMN nouvelle_colonne VARCHAR(100) NULL AFTER colonne_existante;
+
+-- Exemple de modification de colonne
+-- ALTER TABLE nom_de_la_table MODIFY COLUMN colonne_a_modifier INT NOT NULL;
+
+-- Exemple de création de table
+-- CREATE TABLE nouvelle_table (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     nom VARCHAR(255) NOT NULL
+-- );
+
+-- Placez ici vos requêtes SQL de migration.
+-- Supprimez ce fichier ou renommez-le pour éviter toute exécution accidentelle.
