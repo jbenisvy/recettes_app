@@ -11,11 +11,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
     <?php endif; ?>
 </div>
 <nav class="navbar">
-    <div class="navbar-logo">
-        <a href="index.php" aria-label="Accueil">
-            <img src="https://img.icons8.com/fluency/40/000000/chef-hat.png" alt="Logo Chef" style="vertical-align:middle;">
-        </a>
-    </div>
+
     <button class="navbar-toggle" id="navbar-toggle-btn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navbar-links" autocomplete="off" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#1976d2;border:none;z-index:99999;pointer-events:auto;border-radius:8px;transition:background 0.2s;">
     <span style="display:block;width:28px;height:28px;position:relative;">
         <span style="position:absolute;left:0;top:4px;width:28px;height:4px;background:#fff;border-radius:2px;"></span>
