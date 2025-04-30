@@ -16,7 +16,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
             <img src="https://img.icons8.com/fluency/40/000000/chef-hat.png" alt="Logo Chef" style="vertical-align:middle;">
         </a>
     </div>
-    <button class="navbar-toggle" id="navbar-toggle-btn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navbar-links" autocomplete="off" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:none;border:none;z-index:9999;">
+    <button class="navbar-toggle" id="navbar-toggle-btn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navbar-links" autocomplete="off" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:blue !important;border:none;z-index:99999;pointer-events:auto;">
     <span class="navbar-toggle-icon" style="display:block;width:28px;height:28px;"></span>
 </button>
     <ul class="navbar-links" id="navbar-links">
