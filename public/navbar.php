@@ -39,11 +39,20 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 document.addEventListener('DOMContentLoaded', function() {
     const toggle = document.querySelector('.navbar-toggle');
     const links = document.getElementById('navbar-links');
+    // Ajout debug visuel
+    var debugClickDiv = document.createElement('div');
+    debugClickDiv.id = 'debugClickDiv';
+    debugClickDiv.style = 'background:#e63946;color:white;padding:8px;text-align:center;z-index:9999;';
+    document.body.insertBefore(debugClickDiv, document.body.firstChild);
+
     function toggleMenu(e) {
         e.preventDefault();
         const expanded = this.getAttribute('aria-expanded') === 'true';
         this.setAttribute('aria-expanded', !expanded);
         links.classList.toggle('navbar-links-open');
+        // Affiche l'état du menu à chaque clic/tap
+        debugClickDiv.innerText = 'MENU hamburger cliqué - état : ' + (!expanded ? 'ouvert' : 'fermé') + ' (' + (e.type) + ')';
+        setTimeout(function(){ debugClickDiv.innerText = ''; }, 2000);
     }
     if (toggle && links) {
         toggle.addEventListener('click', toggleMenu);
