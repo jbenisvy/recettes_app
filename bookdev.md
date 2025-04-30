@@ -1,5 +1,38 @@
 # Suivi de développement — Version PHP pur
 
+## Journal de bord du 29/04/2025
+
+### Déploiement, corrections et améliorations majeures
+- **Automatisation du déploiement** :
+  - Création et amélioration du script `deploy.sh` pour valider, commiter, pousser sur GitHub puis déployer automatiquement sur o2switch via SSH/rsync.
+  - Ajout d'explications détaillées pour la configuration du script et la gestion des chemins distants.
+- **Corrections de liens relatifs/absolus** :
+  - Correction de tous les liens `/index.php` et `/css/home.css` dans l'espace admin pour garantir le bon fonctionnement en sous-dossier sur o2switch.
+  - Correction du lien "Espace Admin" sur la page d'accueil pour pointer vers `admin/dashboard.php` (chemin relatif).
+  - Correction du bouton "Retour à l'accueil" dans le dashboard admin et tous les fichiers admin.
+- **Responsive/mobile** :
+  - Amélioration du CSS responsive pour la navigation mobile (menu hamburger, overlay, accessibilité sur petit écran).
+  - Vérification du fonctionnement du menu sur mobile et debug JS/CSS pour garantir l'accès à toutes les pages.
+- **Debug et fiabilité liste de courses** :
+  - Ajout de logs/debug pour tracer l'ajout des ingrédients dans la liste de courses et l'affichage côté utilisateur.
+  - Vérification de la cohérence entre les tables `recipe_ingredients`, `shopping_list_items` et `ingredients`.
+- **Sécurité et base de données** :
+  - Migration Doctrine pour forcer la valeur par défaut `[]` sur la colonne `roles` de la table `users` (jamais NULL).
+- **Documentation et workflow** :
+  - Ajout de l'inclusion de la barre de navigation (`navbar.php`) en haut de `index.php`.
+  - Résout le bug où le menu n'était pas accessible sur mobile (seule la page d'accueil s'affichait sans navigation).
+  - La navigation est désormais cohérente sur toutes les pages, y compris sur mobile.
+  - Ajout d'instructions précises pour l'utilisation de SSH, la création de dossiers distants et la gestion du cache.
+  - Conseils pour la gestion des fichiers uploadés (exclusion possible dans rsync).
+
+---
+
+## [2025-04-30] Correction menu mobile sur la page d'accueil
+
+- Ajout de l'inclusion de la barre de navigation (`navbar.php`) en haut de `index.php`.
+- Résout le bug où le menu n'était pas accessible sur mobile (seule la page d'accueil s'affichait sans navigation).
+- La navigation est désormais cohérente sur toutes les pages, y compris sur mobile.
+
 ## Objectif global
 Créer une application web complète de gestion de recettes de cuisine avec :
 - Inscription, connexion et gestion de profil utilisateur

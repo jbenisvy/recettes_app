@@ -36,7 +36,7 @@ $latest_recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $pageTitle = "Accueil - Gestion des Recettes";
 $additionalCss = ["css/home.css"];
 ob_start(); ?>
-
+<?php include 'navbar.php'; ?>
 
 
 <div class="welcome-section">
