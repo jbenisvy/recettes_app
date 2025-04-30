@@ -16,7 +16,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
             <img src="https://img.icons8.com/fluency/40/000000/chef-hat.png" alt="Logo Chef" style="vertical-align:middle;">
         </a>
     </div>
-    <button class="navbar-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navbar-links">
+    <button class="navbar-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navbar-links" style="border:3px solid red; background:rgba(255,0,0,0.1); z-index:9999; position:relative;">
         <span class="navbar-toggle-icon"></span>
     </button>
     <ul class="navbar-links" id="navbar-links">
@@ -44,6 +44,16 @@ document.addEventListener('DOMContentLoaded', function() {
     debugClickDiv.id = 'debugClickDiv';
     debugClickDiv.style = 'background:#e63946;color:white;padding:8px;text-align:center;z-index:9999;';
     document.body.insertBefore(debugClickDiv, document.body.firstChild);
+
+    // Affiche dynamiquement la position et la taille du bouton hamburger
+    setTimeout(function() {
+        if (toggle) {
+            var rect = toggle.getBoundingClientRect();
+            debugClickDiv.innerText = 'Bouton hamburger : x=' + Math.round(rect.x) + ', y=' + Math.round(rect.y) + ', w=' + Math.round(rect.width) + ', h=' + Math.round(rect.height);
+        } else {
+            debugClickDiv.innerText = 'Bouton hamburger introuvable';
+        }
+    }, 1000);
 
     function toggleMenu(e) {
         e.preventDefault();
