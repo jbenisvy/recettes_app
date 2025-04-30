@@ -37,19 +37,25 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 </nav>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('navbar.js chargé'); // Pour debug mobile
+    // Affiche un message visible pour vérifier exécution JS sur mobile
+    var debugDiv = document.createElement('div');
+    debugDiv.innerHTML = '<div style="background:#e63946;color:white;padding:8px;text-align:center;z-index:9999;">JS NAVBAR OK</div>';
+    document.body.insertBefore(debugDiv, document.body.firstChild);
+
     const toggle = document.querySelector('.navbar-toggle');
     const links = document.getElementById('navbar-links');
+    // TEST : Forcer l'ouverture du menu au chargement
+    if (links) {
+        links.classList.add('navbar-links-open');
+    }
     if (toggle && links) {
         toggle.addEventListener('click', function(e) {
             e.preventDefault();
             const expanded = this.getAttribute('aria-expanded') === 'true';
             this.setAttribute('aria-expanded', !expanded);
             links.classList.toggle('navbar-links-open');
-            console.log('Menu hamburger cliqué, état:', !expanded);
         });
-    } else {
-        console.log('navbar.js : éléments non trouvés');
     }
+    // À retirer après diagnostic
 });
 </script>
