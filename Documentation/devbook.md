@@ -86,11 +86,16 @@ Les prochaines étapes seront ajoutées ici au fur et à mesure.
 ---
 
 ## Historique des ajouts
-- 24/04/2025 : **Refonte complète de la page d'accueil et modernisation du design**
-    - Mise en place d'une grille responsive pour les recettes (`.recipes-grid`), avec affichage en colonnes sur desktop et en pile sur mobile.
-    - Création de cartes recettes modernes (`.recipe-card`) : fond blanc, ombre, coins arrondis, effet au survol.
-    - Intégration d'un cadre image carré centré pour chaque recette, avec gestion de l'affichage homogène (object-fit: cover, fond doux, image par défaut stylée).
-    - Ajout d'un badge catégorie, d'un affichage clair du titre, auteur, description, et boutons d'action dans chaque carte.
+- 15/05/2025 : **Gestion avancée des unités et ingrédients, fiabilisation et modernisation UX**
+    - Nettoyage et unicité stricte des tables `units` et `ingredients` (suppression des doublons, collation insensible à la casse, noms en majuscules sans accents).
+    - Ajout ou correction des contraintes d'unicité SQL sur `units.name` et `ingredients.name`.
+    - Alimentation massive de la table `units` avec toutes les unités courantes de cuisine (requête adaptée MySQL).
+    - Correction du formulaire de création de recette : la liste déroulante des unités est à nouveau dynamique et alimentée via AJAX depuis la base.
+    - Suppression des `<option>` HTML résiduels hors du `<select>` pour les unités.
+    - Amélioration de la gestion des erreurs SQL lors de l'insertion des unités.
+    - Mise en place d'une boîte de confirmation stylée (modal) après création, modification ou suppression d'une recette (remplace les alertes JS classiques).
+    - Documentation et scripts SQL ajoutés pour migration/cleaning des données existantes.
+    - Rappel de la procédure de déploiement via `deploy.sh` et bonnes pratiques pour la mise à jour distante.
     - Ajout et application du fichier `public/css/home.css` pour tous les styles spécifiques à l'accueil.
     - Correction des bugs d'affichage liés à la structure PHP (suppression des doublons, gestion correcte du buffer de sortie, injection via `$pageContent` dans le template `base.php`).
     - Amélioration du contraste et de la lisibilité du bandeau d'accueil (titre en blanc, overlay sombre sur le dégradé, ombre portée).

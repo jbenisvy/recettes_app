@@ -135,11 +135,17 @@ if (!is_array($ingredients)) {
     $_SESSION['success_message'] = "Recette modifiée avec succès !";
         // Correction : autoriser la modification par admin
         if (!empty($_SESSION['is_admin']) && $_SESSION['is_admin']) {
+            // Correction : encoder ingredients et steps si ce sont des tableaux
+            $ingredients_sql = is_array($ingredients) ? json_encode($ingredients, JSON_UNESCAPED_UNICODE) : $ingredients;
+            $steps_sql = is_array($steps) ? json_encode($steps, JSON_UNESCAPED_UNICODE) : $steps;
             $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=?");
-            $stmt->execute([$title, $description, $ingredients, $steps, $category_id, $prep_time, $cook_time, $difficulty, $id]);
+            $stmt->execute([$title, $description, $ingredients_sql, $steps_sql, $category_id, $prep_time, $cook_time, $difficulty, $id]);
         } else {
+            // Correction : encoder ingredients et steps si ce sont des tableaux
+            $ingredients_sql = is_array($ingredients) ? json_encode($ingredients, JSON_UNESCAPED_UNICODE) : $ingredients;
+            $steps_sql = is_array($steps) ? json_encode($steps, JSON_UNESCAPED_UNICODE) : $steps;
             $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=? AND user_id=?");
-            $stmt->execute([$title, $description, $ingredients, $steps, $category_id, $prep_time, $cook_time, $difficulty, $id, $_SESSION['user_id']]);
+            $stmt->execute([$title, $description, $ingredients_sql, $steps_sql, $category_id, $prep_time, $cook_time, $difficulty, $id, $_SESSION['user_id']]);
         }
 
         // --- Synchronisation des tags dans recipe_tags ---
