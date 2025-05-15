@@ -119,6 +119,42 @@ button {
     transition: background-color 0.3s;
 }
 
+.btn-delete {
+    background: linear-gradient(90deg, #e63946 60%, #f4a261 100%);
+    color: #fff !important;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 8px #e6394622;
+    padding: 0.7rem 1.3rem 0.7rem 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    letter-spacing: 0.03em;
+    font-size: 1.09rem;
+    transition: background 0.25s, box-shadow 0.25s, transform 0.1s;
+    outline: none;
+}
+.btn-delete:hover, .btn-delete:focus {
+    background: linear-gradient(90deg, #c1121f 60%, #e76f51 100%);
+    color: #fff;
+    box-shadow: 0 4px 16px #e6394633;
+    transform: translateY(-2px) scale(1.04);
+    text-decoration: none;
+}
+.btn-delete:active {
+    background: #b70e19;
+    color: #fff;
+    box-shadow: 0 1px 4px #e6394622;
+    transform: scale(0.98);
+}
+.btn-delete svg, .btn-delete .icon {
+    font-size: 1.2em;
+    margin-right: 0.3em;
+    vertical-align: middle;
+}
+
+
 button:hover {
     background-color: #236665;
 }

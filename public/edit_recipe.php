@@ -206,9 +206,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if (!empty($success)) {
-            $_SESSION['success_message'] = "Médias ajoutés avec succès.";
-        }
+        // Message de succès général après modification
+        $_SESSION['success_message'] = "Recette modifiée avec succès !";
         header('Location: edit_recipe.php?id='.$id); exit;
     }
 }
@@ -228,10 +227,30 @@ $selected_tags = $selected_tags->fetchAll(PDO::FETCH_COLUMN);
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<?php if (!empty($_SESSION['success_message'])): ?>
+    <script>
+        setTimeout(function() { alert(<?php echo json_encode($_SESSION['success_message']); ?>); }, 100);
+    </script>
+    <?php unset($_SESSION['success_message']); ?>
+<?php endif; ?>
 <a class="btn" href="index.php" style="margin:16px 0 8px 0;display:inline-block;">&larr; Retour à l'accueil</a>
 <?php include 'navbar.php'; ?>
 <div class="container">
+    <?php if (!empty($_SESSION['success_message'])): ?>
+        <script>
+            alert(<?php echo json_encode($_SESSION['success_message']); ?>);
+        </script>
+        <?php unset($_SESSION['success_message']); ?>
+    <?php endif; ?>
     <h1>Modifier la recette</h1>
+<div class="main-actions" style="margin-bottom:18px;display:flex;gap:10px;align-items:center;">
+    <a class="btn" href="index.php">&larr; Retour à l'accueil</a>
+    <a class="btn" href="print_recipe.php?id=<?php echo $id; ?>" target="_blank">🖨️ Imprimer</a>
+    <a class="btn" href="pdf_recipe.php?id=<?php echo $id; ?>" target="_blank">📄 PDF</a>
+    <?php if ((isset($_SESSION['user_id']) && isset($recipe['user_id']) && $_SESSION['user_id'] == $recipe['user_id']) || (!empty($_SESSION['is_admin']) && $_SESSION['is_admin'])): ?>
+        <a href="delete_recipe.php?id=<?php echo $recipe['id']; ?>" onclick="return confirm('Supprimer cette recette ?');" class="btn btn-delete" style="background:#c00;color:#fff;">🗑️ Supprimer</a>
+    <?php endif; ?>
+</div>
     <?php if (!empty($errors)) : ?>
         <div class="error"><ul><?php foreach ($errors as $e) echo "<li>$e</li>"; ?></ul></div>
     <?php endif; ?>
@@ -284,23 +303,62 @@ foreach ($pdo->query('SELECT id, name FROM units') as $row) {
 }
 ?>
 <div id="ingredients-group">
-    <select id="ingredient-select">
-        <option value="">Choisir un ingrédient</option>
-        <option value="__autre__">Autre...</option>
-        <?php
-        $all_ingredients = $pdo->query('SELECT name FROM ingredients ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
-        foreach ($all_ingredients as $ing) {
-            echo '<option value="' . htmlspecialchars($ing) . '">' . htmlspecialchars($ing) . '</option>';
+    <select id="ingredient-select" style="width:100%;">
+    <option value="">Choisir un ingrédient</option>
+    <option value="__autre__">Autre...</option>
+    <?php
+    $all_ingredients = $pdo->query('SELECT name FROM ingredients ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($all_ingredients as $ing) {
+        echo '<option value="' . htmlspecialchars($ing) . '">' . htmlspecialchars($ing) . '</option>';
+    }
+    ?>
+</select>
+<!-- Select2 CSS & JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#ingredient-select').select2({
+        placeholder: 'Rechercher ou sélectionner un ingrédient',
+        allowClear: true,
+        width: 'resolve',
+        dropdownAutoWidth: true,
+        language: {
+            noResults: function() { return "Aucun ingrédient trouvé"; },
+            searching: function() { return "Recherche..."; }
         }
-        ?>
-    </select>
+    });
+});
+</script>
     <input type="text" id="ingredient-other" placeholder="Nom de l'ingrédient" style="width:160px;display:none;">
     <input type="text" id="ingredient-quantity" placeholder="Quantité" style="width:90px;">
-    <select id="ingredient-unit">
-        <option value="">Unité</option>
-        <!-- Les options seront ajoutées dynamiquement -->
-        <option value="__autre__">Autre...</option>
-    </select>
+    <label for="ingredient-unit" style="display:block;margin-top:8px;margin-bottom:2px;"><b>Unité&nbsp;:</b></label>
+    <select id="ingredient-unit" style="width:100%;">
+    <option value="">Unité</option>
+    <option value="__autre__">Autre...</option>
+    <?php
+    $all_units = $pdo->query('SELECT name FROM units ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($all_units as $unit) {
+        echo '<option value="' . htmlspecialchars($unit) . '">' . htmlspecialchars($unit) . '</option>';
+    }
+    ?>
+</select>
+<!-- Select2 CSS & JS (déjà chargés pour ingrédients) -->
+<script>
+$(document).ready(function() {
+    $('#ingredient-unit').select2({
+        placeholder: 'Rechercher ou sélectionner une unité',
+        allowClear: true,
+        width: 'resolve',
+        dropdownAutoWidth: true,
+        language: {
+            noResults: function() { return "Aucune unité trouvée"; },
+            searching: function() { return "Recherche..."; }
+        }
+    });
+});
+</script>
     <input type="text" id="ingredient-unit-other" placeholder="Autre unité" style="width:90px; display:none;">
     <button type="button" id="add-ingredient">Ajouter</button>
     <script>
@@ -308,16 +366,24 @@ foreach ($pdo->query('SELECT id, name FROM units') as $row) {
     var unitIdToName = <?php echo json_encode($unitIdToName, JSON_UNESCAPED_UNICODE); ?>;
     // Charger dynamiquement les unités depuis units.php
     fetch('units.php')
-        .then(r => r.json())
-        .then(units => {
-            const select = document.getElementById('ingredient-unit');
-            units.forEach(u => {
+    .then(r => r.json())
+    .then(units => {
+        const select = document.getElementById('ingredient-unit');
+        // Supprime toutes les options sauf '' et '__autre__' (conserve les deux premières)
+        while (select.options.length > 2) {
+            select.remove(2);
+        }
+        // Ajoute les unités après '' et 'Autre...'
+        units.forEach(u => {
+            // Empêche d'ajouter 'Autre...' venant de la base par erreur
+            if (u.name !== '__autre__') {
                 const opt = document.createElement('option');
-                opt.value = u.id;
+                opt.value = u.name;
                 opt.textContent = u.name;
-                select.insertBefore(opt, select.querySelector('option[value="__autre__"]'));
-            });
+                select.appendChild(opt);
+            }
         });
+    });
     // Afficher le champ texte si "Autre..." est choisi
     const unitSelect = document.getElementById('ingredient-unit');
     const unitOther = document.getElementById('ingredient-unit-other');
@@ -390,21 +456,50 @@ function updateHidden() {
     // Ajout d'un champ caché pour unit_id si besoin (à adapter si tu veux un stockage JSON plus propre)
 
 }
-addBtn.onclick = function() {
+addBtn.addEventListener('click', function() {
     let name = select.value === '__autre__' ? other.value.trim() : select.value;
+    let quantity = qty.value.trim();
+    let unitVal = unit.value === '__autre__' ? unitOther.value.trim() : unit.value;
     if (!name) return;
-    let unitVal = unit.value;
-    if (unitVal === "__autre__") unitVal = unitOther.value.trim();
-    ingredientsArr.push({ name: name, quantity: qty.value, unit: unitVal });
+    // Vérifie doublon
+    if (ingredientsArr.some(e => e.name === name && e.unit === unitVal)) return;
+
+    // Si nouvel ingrédient, l'ajoute dynamiquement à la liste ET à la base
+    if (select.value === '__autre__') {
+        let newOption = new Option(name, name, true, true);
+        $(select).append(newOption).trigger('change');
+        $.ajax({
+            url: 'save_ingredient.php',
+            method: 'POST',
+            data: { name: name },
+            dataType: 'json'
+        });
+    }
+
+    // Si nouvelle unité, l'ajoute dynamiquement à la liste ET à la base
+    if (unit.value === '__autre__' && unitOther.value.trim()) {
+        let newUnit = unitOther.value.trim();
+        let newUnitOption = new Option(newUnit, newUnit, true, true);
+        $(unit).append(newUnitOption).trigger('change');
+        $.ajax({
+            url: 'save_unit.php',
+            method: 'POST',
+            data: { name: newUnit },
+            dataType: 'json'
+        });
+    }
+
+    ingredientsArr.push({name, quantity, unit: unitVal});
     updateList();
+    updateHidden();
+    if (select.value === '__autre__') other.value = '';
     qty.value = '';
     unit.value = '';
-    if (select.value === '__autre__') {
-        other.value = '';
-        other.style.display = 'none';
-    }
+    unitOther.value = '';
     select.value = '';
-};
+    $(select).val('').trigger('change');
+    $(unit).val('').trigger('change');
+});
 updateList();
 // Synchronisation finale avant soumission du formulaire
 const form = document.querySelector('form');

@@ -199,8 +199,15 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
     </style>
 </head>
 <body>
+<?php if (!empty($_SESSION['success_message'])): ?>
+    <script>
+        setTimeout(function() { alert(<?php echo json_encode($_SESSION['success_message']); ?>); }, 100);
+    </script>
+    <?php unset($_SESSION['success_message']); ?>
+<?php endif; ?>
     <?php include 'navbar.php'; ?>
     <div class="container">
+
         <h1>Ajouter une recette</h1>
         <a href="import_recipe.php" class="btn btn-secondary" style="float:right;margin-bottom:10px;">Importer une recette depuis une URL</a>
         
@@ -253,7 +260,7 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
             <textarea name="description" placeholder="Description"><?php echo htmlspecialchars($description); ?></textarea><br>
             
             <div id="ingredients-select-group">
-                <select id="ingredients-select">
+                <select id="ingredients-select" style="width:100%;">
                     <option value="">Choisir un ingrédient</option>
                     <option value="__autre__">Autre...</option>
                     <?php
@@ -263,20 +270,61 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
                     }
                     ?>
                 </select>
+                <!-- Select2 CSS & JS -->
+                <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+                <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+                <script>
+                $(document).ready(function() {
+                    $('#ingredients-select').select2({
+                        placeholder: 'Rechercher ou sélectionner un ingrédient',
+                        allowClear: true,
+                        width: 'resolve',
+                        dropdownAutoWidth: true,
+                        language: {
+                            noResults: function() { return "Aucun ingrédient trouvé"; },
+                            searching: function() { return "Recherche..."; }
+                        }
+                    });
+                });
+                </script>
                 <input type="text" id="ingredient-other" placeholder="Nom de l'ingrédient" style="width:160px;display:none;">
                 <input type="text" id="ingredient-quantity" placeholder="Quantité">
-                <select id="ingredient-unit">
-                    <option value="">Unité</option>
-                    <option value="g">grammes</option>
-                    <option value="kg">kg</option>
-                    <option value="ml">ml</option>
-                    <option value="cl">cl</option>
-                    <option value="l">litres</option>
-                    <option value="càs">cuillère à soupe</option>
-                    <option value="càc">cuillère à café</option>
-                    <option value="pincée">pincée</option>
-                    <option value="__autre__">autre...</option>
-                </select>
+<label for="ingredient-unit" style="display:block;margin-top:8px;margin-bottom:2px;"><b>Unité&nbsp;:</b></label>
+<select id="ingredient-unit" style="width:100%;">
+    <option value="">Unité</option>
+    <option value="__autre__">Autre...</option>
+    <?php
+    $all_units = $pdo->query('SELECT name FROM units ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($all_units as $unit) {
+        echo '<option value="' . htmlspecialchars($unit) . '">' . htmlspecialchars($unit) . '</option>';
+    }
+    ?>
+</select>
+                <!-- Select2 CSS & JS (déjà chargés pour ingrédients) -->
+                <script>
+                $(document).ready(function() {
+                $('#ingredient-unit').select2({
+                    placeholder: 'Rechercher ou sélectionner une unité',
+                    allowClear: true,
+                    width: 'resolve',
+                    dropdownAutoWidth: true,
+                    language: {
+                        noResults: function() { return "Aucune unité trouvée"; },
+                        searching: function() { return "Recherche..."; }
+                    }
+                });
+                        placeholder: 'Rechercher ou sélectionner une unité',
+                        allowClear: true,
+                        width: 'resolve',
+                        dropdownAutoWidth: true,
+                        language: {
+                            noResults: function() { return "Aucune unité trouvée"; },
+                            searching: function() { return "Recherche..."; }
+                        }
+                    });
+                });
+                </script>
                 <input type="text" id="ingredient-unit-other" style="display:none;" placeholder="Autre unité...">
                 <button type="button" id="add-ingredient">Ajouter</button>
                 <div id="selected-ingredients"></div>
@@ -345,25 +393,50 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
         }
     });
 
-    addBtn.onclick = function() {
+    addBtn.addEventListener('click', function() {
         let name = select.value === '__autre__' ? other.value.trim() : select.value;
+        let quantity = qty.value.trim();
+        let unitVal = unit.value === '__autre__' ? unitOther.value.trim() : unit.value;
         if (!name) return;
-        selected.push({
-            name: name,
-            quantity: qty.value,
-            unit: unit.value === '__autre__' ? unitOther.value : unit.value
-        });
+        // Vérifie doublon
+        if (selected.some(e => e.name === name && e.unit === unitVal)) return;
+
+        // Si nouvel ingrédient, l'ajoute dynamiquement à la liste ET à la base
+        if (select.value === '__autre__') {
+            let newOption = new Option(name, name, true, true);
+            $(select).append(newOption).trigger('change');
+            $.ajax({
+                url: 'save_ingredient.php',
+                method: 'POST',
+                data: { name: name },
+                dataType: 'json'
+            });
+        }
+
+        // Si nouvelle unité, l'ajoute dynamiquement à la liste ET à la base
+        if (unit.value === '__autre__' && unitOther.value.trim()) {
+            let newUnit = unitOther.value.trim();
+            let newUnitOption = new Option(newUnit, newUnit, true, true);
+            $(unit).append(newUnitOption).trigger('change');
+            $.ajax({
+                url: 'save_unit.php',
+                method: 'POST',
+                data: { name: newUnit },
+                dataType: 'json'
+            });
+        }
+
+        selected.push({name, quantity, unit: unitVal});
         renderTags();
+        updateHidden();
+        if (select.value === '__autre__') other.value = '';
         qty.value = '';
         unit.value = '';
         unitOther.value = '';
-        unitOther.style.display = 'none';
-        if (select.value === '__autre__') {
-            other.value = '';
-            other.style.display = 'none';
-        }
         select.value = '';
-    };
+        $(select).val('').trigger('change');
+        $(unit).val('').trigger('change');
+    });
 
     function renderTags() {
         selectedDiv.innerHTML = '';
