@@ -43,7 +43,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     file_put_contents('/tmp/debug_edit_recipe.txt', print_r($_POST, true));
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
-    $ingredients = trim($_POST['ingredients'] ?? '');
+    $ingredients_json = $_POST['ingredients'] ?? '[]';
+$ingredients = json_decode($ingredients_json, true);
+if (!is_array($ingredients)) {
+    // Compatibilité ancien format : split lines
+    $ingredients = array_map(function($l) {
+        $parts = explode(':', $l);
+        return [
+            'id' => '',
+            'name' => isset($parts[0]) ? trim($parts[0]) : '',
+            'quantity' => isset($parts[1]) ? trim(explode(' ', $parts[1])[1] ?? '') : '',
+            'unit' => isset($parts[1]) ? trim(explode(' ', $parts[1])[2] ?? '') : ''
+        ];
+    }, preg_split('/\r?\n/', trim($_POST['ingredients'])));
+}
     $steps = trim($_POST['steps'] ?? '');
     $category_id = $_POST['category_id'] ?? null;
     $prep_time = intval($_POST['prep_time'] ?? 0);
@@ -119,6 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
+    $_SESSION['success_message'] = "Recette modifiée avec succès !";
         // Correction : autoriser la modification par admin
         if (!empty($_SESSION['is_admin']) && $_SESSION['is_admin']) {
             $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=?");
@@ -141,52 +155,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$id]);
 
         if (!empty($ingredients)) {
-            // Chaque ligne = "Nom : quantité unité" ou "Nom"
-            $lines = explode("\n", $ingredients);
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if (!$line) continue;
-                // Extraction du nom, quantité, unité
-                if (preg_match('/^(.+?)\\s*:\\s*([\\d.,]+)?\\s*(.*)$/u', $line, $m)) {
-                    $name = trim($m[1]);
-                    $quantity = isset($m[2]) ? trim($m[2]) : '';
-                    $unit = isset($m[3]) ? trim($m[3]) : '';
-                } else {
-                    $name = $line;
-                    $quantity = '';
-                    $unit = '';
-                }
-                // Chercher l'ingrédient ou le créer
-                $stmt = $pdo->prepare('SELECT id FROM ingredients WHERE name = ?');
-                $stmt->execute([$name]);
-                $ingredient_id = $stmt->fetchColumn();
-                if (!$ingredient_id) {
-                    $stmt = $pdo->prepare('INSERT INTO ingredients (name) VALUES (?)');
-                    $stmt->execute([$name]);
-                    $ingredient_id = $pdo->lastInsertId();
-                }
-                // Recherche de l'id de l'unité si renseignée
-                $unit_id = null;
-                if ($unit !== '') {
-                    // Si c'est un entier, c'est un id d'unité
-                    if (ctype_digit($unit)) {
-                        $unit_id = (int)$unit;
-                    } else {
-                        // Sinon, chercher par nom (pour compat ou "autre")
-                        $stmtu = $pdo->prepare('SELECT id FROM units WHERE name = ?');
-                        $stmtu->execute([$unit]);
-                        $unit_id = $stmtu->fetchColumn();
-                        if (!$unit_id && $unit !== '') {
-                            // Ajoute l'unité si elle n'existe pas
-                            $stmtu = $pdo->prepare('INSERT INTO units (name) VALUES (?)');
-                            $stmtu->execute([$unit]);
-                            $unit_id = $pdo->lastInsertId();
+            // Nouveau format JSON : tableau d'objets {id, name, quantity, unit}
+            if (is_array($ingredients) && isset($ingredients[0]['id'])) {
+                foreach ($ingredients as $ing) {
+                    $ingredient_id = $ing['id'];
+                    $name = $ing['name'];
+                    $quantity = $ing['quantity'];
+                    $unit = $ing['unit'];
+                    // Si pas d'id (cas "autre" ou ancien), chercher/créer par nom
+                    if (!$ingredient_id) {
+                        $stmt = $pdo->prepare('SELECT id FROM ingredients WHERE name = ?');
+                        $stmt->execute([$name]);
+                        $ingredient_id = $stmt->fetchColumn();
+                        if (!$ingredient_id) {
+                            $stmt = $pdo->prepare('INSERT INTO ingredients (name) VALUES (?)');
+                            $stmt->execute([$name]);
+                            $ingredient_id = $pdo->lastInsertId();
                         }
                     }
+                    // Recherche de l'id de l'unité si renseignée
+                    $unit_id = null;
+                    if ($unit !== '') {
+                        if (ctype_digit($unit)) {
+                            $unit_id = (int)$unit;
+                        } else {
+                            $stmtu = $pdo->prepare('SELECT id FROM units WHERE name = ?');
+                            $stmtu->execute([$unit]);
+                            $unit_id = $stmtu->fetchColumn();
+                            if (!$unit_id && $unit !== '') {
+                                $stmtu = $pdo->prepare('INSERT INTO units (name) VALUES (?)');
+                                $stmtu->execute([$unit]);
+                                $unit_id = $pdo->lastInsertId();
+                            }
+                        }
+                    }
+                    $stmt = $pdo->prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit_id) VALUES (?, ?, ?, ?)');
+                    $stmt->execute([$id, $ingredient_id, $quantity, $unit_id]);
                 }
-                // Insérer l'association
-                $stmt = $pdo->prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit_id) VALUES (?, ?, ?, ?)');
-                $stmt->execute([$id, $ingredient_id, $quantity, $unit_id]);
+            } else {
+                // Ancien format texte (compatibilité)
+                $lines = explode("\n", $ingredients);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (!$line) continue;
+                    if (preg_match('/^(.+?)\s*:\s*([\d.,]+)?\s*(.*)$/u', $line, $m)) {
+                        $name = trim($m[1]);
+                        $quantity = isset($m[2]) ? trim($m[2]) : '';
+                        $unit = isset($m[3]) ? trim($m[3]) : '';
+                    } else {
+                        $name = $line;
+                        $quantity = '';
+                        $unit = '';
+                    }
+                    $stmt = $pdo->prepare('SELECT id FROM ingredients WHERE name = ?');
+                    $stmt->execute([$name]);
+                    $ingredient_id = $stmt->fetchColumn();
+                    if (!$ingredient_id) {
+                        $stmt = $pdo->prepare('INSERT INTO ingredients (name) VALUES (?)');
+                        $stmt->execute([$name]);
+                        $ingredient_id = $pdo->lastInsertId();
+                    }
+                    $unit_id = null;
+                    if ($unit !== '') {
+                        if (ctype_digit($unit)) {
+                            $unit_id = (int)$unit;
+                        } else {
+                            $stmtu = $pdo->prepare('SELECT id FROM units WHERE name = ?');
+                            $stmtu->execute([$unit]);
+                            $unit_id = $stmtu->fetchColumn();
+                            if (!$unit_id && $unit !== '') {
+                                $stmtu = $pdo->prepare('INSERT INTO units (name) VALUES (?)');
+                                $stmtu->execute([$unit]);
+                                $unit_id = $pdo->lastInsertId();
+                            }
+                        }
+                    }
+                    $stmt = $pdo->prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit_id) VALUES (?, ?, ?, ?)');
+                    $stmt->execute([$id, $ingredient_id, $quantity, $unit_id]);
+                }
             }
         }
 
@@ -226,12 +272,25 @@ $selected_tags = $selected_tags->fetchAll(PDO::FETCH_COLUMN);
     <meta charset="UTF-8">
     <title>Modifier la recette</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="assets/css/recipe-highlight.css">
+<link rel="stylesheet" href="assets/css/modal-success.css">
 </head>
 <body>
+<?php if (!empty($_SESSION['success_message'])): ?>
+<div class="modal-success-bg" id="modal-success-bg">
+  <div class="modal-success">
+    <span class="modal-icon">✅</span>
+    <h2>Succès</h2>
+    <div><?php echo htmlspecialchars($_SESSION['success_message']); ?></div>
+    <button class="modal-btn" onclick="document.getElementById('modal-success-bg').style.display='none';">Fermer</button>
+  </div>
+</div>
+<script>setTimeout(function(){ document.getElementById('modal-success-bg').style.display='none'; }, 3500);</script>
+<?php unset($_SESSION['success_message']); endif; ?>
 <a class="btn" href="index.php" style="margin:16px 0 8px 0;display:inline-block;">&larr; Retour à l'accueil</a>
 <?php include 'navbar.php'; ?>
 <div class="container">
-    <h1>Modifier la recette</h1>
+    <h1 class="recipe-title-highlight">Modifier la recette : <?php echo htmlspecialchars($recipe['title']); ?></h1>
     <?php if (!empty($errors)) : ?>
         <div class="error"><ul><?php foreach ($errors as $e) echo "<li>$e</li>"; ?></ul></div>
     <?php endif; ?>
@@ -276,26 +335,120 @@ $selected_tags = $selected_tags->fetchAll(PDO::FETCH_COLUMN);
         <textarea id="description" name="description"><?php echo htmlspecialchars($recipe['description']); ?></textarea><br><br>
 
         <label>Ingrédients :</label><br>
+<!-- Select2 CSS -->
+<link href="vendor/select2.min.css" rel="stylesheet">
 <div id="ingredients-group">
-    <select id="ingredient-select">
+    <select id="ingredient-select" style="width:240px;">
         <option value="">Choisir un ingrédient</option>
         <option value="__autre__">Autre...</option>
         <?php
-        $all_ingredients = $pdo->query('SELECT name FROM ingredients ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+        $all_ingredients = $pdo->query('SELECT id, name FROM ingredients ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
         foreach ($all_ingredients as $ing) {
-            echo '<option value="' . htmlspecialchars($ing) . '">' . htmlspecialchars($ing) . '</option>';
+            echo '<option value="' . htmlspecialchars($ing['id']) . '">' . htmlspecialchars($ing['name']) . '</option>';
         }
         ?>
     </select>
-    <input type="text" id="ingredient-other" placeholder="Nom de l'ingrédient" style="width:160px;display:none;">
+    <input type="text" id="ingredient-other" placeholder="Nom de l\'ingrédient" style="width:160px;display:none;">
     <input type="text" id="ingredient-quantity" placeholder="Quantité" style="width:90px;">
-    <select id="ingredient-unit">
-        <option value="">Unité</option>
-        <!-- Les options seront ajoutées dynamiquement -->
-        <option value="__autre__">Autre...</option>
-    </select>
-    <input type="text" id="ingredient-unit-other" placeholder="Autre unité" style="width:90px; display:none;">
+    <select id="ingredient-unit" style="width:180px;"></select>
+<script src="vendor/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Charger dynamiquement les unités depuis units.php
+    function fetchUnits(callback) {
+        $.getJSON('units.php', function(units) {
+            const select = $('#ingredient-unit');
+            select.empty();
+            select.append('<option value="">Unité</option>');
+            units.forEach(function(u) {
+                select.append('<option value="'+u.id+'">'+u.name+'</option>');
+            });
+            if (callback) callback();
+        });
+    }
+    fetchUnits(function() {
+        $('#ingredient-unit').select2({
+            placeholder: "Choisir une unité",
+            allowClear: true,
+            tags: true,
+            language: {
+                noResults: function(params) {
+                    return 'Aucune unité trouvée. Appuyez sur Entrée pour ajouter.';
+                }
+            }
+        });
+    });
+
+    // Ajout dynamique d'une unité
+    $('#ingredient-unit').on('select2:select', function(e) {
+        const data = e.params.data;
+        if (data.id && data._resultId && data._resultId.startsWith('select2-ingredient-unit-result-new-')) {
+            // Nouvelle unité à ajouter
+            $.post('add_unit.php', { name: data.text }, function(resp) {
+                if (resp && resp.id) {
+                    // Ajoute et sélectionne l'unité
+                    const newOption = new Option(resp.name, resp.id, true, true);
+                    $('#ingredient-unit').append(newOption).trigger('change');
+                }
+            }, 'json');
+        }
+    });
+});
+</script>
     <button type="button" id="add-ingredient">Ajouter</button>
+    <!-- Select2 JS -->
+    <script src="vendor/select2.min.js"></script>
+    <script>
+    // Initialiser Select2 avec recherche dynamique
+    $(document).ready(function() {
+        $('#ingredient-select').select2({
+            placeholder: "Choisir un ingrédient",
+            allowClear: true,
+            width: 'resolve',
+            language: {
+                noResults: function() { return "Aucun ingrédient trouvé"; }
+            }
+        });
+        // Afficher champ texte si "Autre..." sélectionné
+        $('#ingredient-select').on('change', function() {
+            if ($(this).val() === "__autre__") {
+                $('#ingredient-other').show().focus();
+            } else {
+                $('#ingredient-other').hide();
+            }
+        });
+        // Ajout dynamique d'un nouvel ingrédient via AJAX
+        $('#ingredient-other').on('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const name = $(this).val().trim();
+                if (!name) {
+                    alert('Veuillez saisir un nom d\'ingrédient.');
+                    return;
+                }
+                $.post('add_ingredient.php', { name: name }, function(data) {
+                    if (data && data.id) {
+                        // Ajouter l'option dans Select2 et sélectionner
+                        if ($('#ingredient-select option[value="'+data.id+'"').length === 0) {
+                            const newOption = new Option(data.name, data.id, true, true);
+                            $('#ingredient-select').append(newOption).trigger('change');
+                        } else {
+                            $('#ingredient-select').val(data.id).trigger('change');
+                        }
+                        $('#ingredient-other').val('').hide();
+                        $('#ingredient-select').select2('close');
+                    } else if (data && data.error) {
+                        alert(data.error);
+                    } else {
+                        alert('Erreur lors de l\'ajout de l\'ingrédient.');
+                    }
+                }, 'json').fail(function(xhr) {
+                    alert('Erreur serveur : ' + (xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'inconnue'));
+                });
+            }
+        });
+    });
+    </script>
     <script>
     // Charger dynamiquement les unités depuis units.php
     fetch('units.php')
@@ -322,7 +475,26 @@ $selected_tags = $selected_tags->fetchAll(PDO::FETCH_COLUMN);
     });
     </script>
     <ul id="ingredient-list"></ul>
-    <input type="hidden" name="ingredients" id="ingredients-hidden" value="<?php echo htmlspecialchars($recipe['ingredients']); ?>">
+    <?php
+// Reconstruire la liste des ingrédients à partir de recipe_ingredients
+$ingredients_arr = [];
+$stmt = $pdo->prepare('SELECT ri.ingredient_id as id, i.name, ri.quantity, u.name as unit
+    FROM recipe_ingredients ri
+    JOIN ingredients i ON ri.ingredient_id = i.id
+    LEFT JOIN units u ON ri.unit_id = u.id
+    WHERE ri.recipe_id = ?');
+$stmt->execute([$id]);
+foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $ingredients_arr[] = [
+        'id' => $row['id'],
+        'name' => $row['name'],
+        'quantity' => $row['quantity'],
+        'unit' => $row['unit'] ?? ''
+    ];
+}
+$ingredients_value = json_encode($ingredients_arr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+?>
+<input type="hidden" name="ingredients" id="ingredients-hidden" value="<?php echo htmlspecialchars($ingredients_value); ?>">
 </div>
 <script>
 // Ajout d'un ingrédient à la liste
@@ -343,21 +515,27 @@ select.addEventListener('change', function() {
     }
 });
 
-// Initialiser avec les ingrédients existants
-let ingredientsArr = hidden.value.trim() ? hidden.value.trim().split('\n').map(l => {
-    let parts = l.split(':');
-    return {
-        name: parts[0] ? parts[0].trim() : '',
-        quantity: parts[1] ? parts[1].split(' ')[1] || '' : '',
-        unit: parts[1] ? parts[1].split(' ')[2] || '' : ''
-    };
-}) : [];
-
+// Initialiser avec les ingrédients existants (JSON ou ancien format)
+let ingredientsArr = [];
+try {
+    ingredientsArr = hidden.value.trim() ? JSON.parse(hidden.value) : [];
+} catch(e) {
+    // Ancien format : compatibilité descendante
+    ingredientsArr = hidden.value.trim() ? hidden.value.trim().split('\n').map(l => {
+        let parts = l.split(':');
+        return {
+            id: '',
+            name: parts[0] ? parts[0].trim() : '',
+            quantity: parts[1] ? parts[1].split(' ')[1] || '' : '',
+            unit: parts[1] ? parts[1].split(' ')[2] || '' : ''
+        };
+    }) : [];
+}
 function updateList() {
     list.innerHTML = '';
     ingredientsArr.forEach((ing, idx) => {
         const li = document.createElement('li');
-        li.textContent = ing.name + (ing.quantity ? ' : ' + ing.quantity : '') + (ing.unit ? ' ' + ing.unit : '');
+        li.textContent = (ing.name ? ing.name : '[Ingrédient #' + (ing.id || '?') + ']') + (ing.quantity ? ' : ' + ing.quantity : '') + (ing.unit ? ' ' + ing.unit : '');
         const del = document.createElement('button');
         del.textContent = '✗';
         del.style.marginLeft = '10px';
@@ -372,16 +550,17 @@ function updateList() {
     updateHidden();
 }
 function updateHidden() {
-    hidden.value = ingredientsArr.map(ing => ing.name + (ing.quantity ? ' : ' + ing.quantity : '') + (ing.unit ? ' ' + ing.unit : '')).join('\n'); // Pour compatibilité affichage
-    // Ajout d'un champ caché pour unit_id si besoin (à adapter si tu veux un stockage JSON plus propre)
-
+    hidden.value = JSON.stringify(ingredientsArr);
 }
+
 addBtn.onclick = function() {
-    let name = select.value === '__autre__' ? other.value.trim() : select.value;
-    if (!name) return;
+    let id = select.value;
+    let name = select.value === '__autre__' ? other.value.trim() : select.options[select.selectedIndex].text;
+    if (select.value === '__autre__' && !name) return;
+    if (!id && !name) return;
     let unitVal = unit.value;
     if (unitVal === "__autre__") unitVal = unitOther.value.trim();
-    ingredientsArr.push({ name: name, quantity: qty.value, unit: unitVal });
+    ingredientsArr.push({ id: id, name: name, quantity: qty.value, unit: unitVal });
     updateList();
     qty.value = '';
     unit.value = '';

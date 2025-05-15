@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+$dbName = $pdo->query('select database()')->fetchColumn();
+file_put_contents('/tmp/ingredient_db_debug.txt', \"DB: $dbName\\n\", FILE_APPEND);
 // add_ingredient.php : ajoute un ingrédient à la base si non présent, retourne l'id et le nom
 header('Content-Type: application/json');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

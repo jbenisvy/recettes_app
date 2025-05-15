@@ -1,5 +1,7 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
+// Inclusion de la connexion BDD d'origine
+require_once __DIR__ . '/../../config/db.php';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -44,5 +46,6 @@ if (session_status() === PHP_SESSION_NONE) session_start();
             <script src="<?php echo htmlspecialchars($js); ?>"></script>
         <?php endforeach; ?>
     <?php endif; ?>
+    <?php include __DIR__ . '/../footer.php'; ?>
 </body>
 </html>

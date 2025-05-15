@@ -20,6 +20,18 @@ $recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <link rel="stylesheet" href="css/home.css">
 </head>
 <body>
+<link rel="stylesheet" href="assets/css/modal-success.css">
+<?php if (!empty($_SESSION['success_message'])): ?>
+<div class="modal-success-bg" id="modal-success-bg">
+  <div class="modal-success">
+    <span class="modal-icon">✅</span>
+    <h2>Succès</h2>
+    <div><?php echo htmlspecialchars($_SESSION['success_message']); ?></div>
+    <button class="modal-btn" onclick="document.getElementById('modal-success-bg').style.display='none';">Fermer</button>
+  </div>
+</div>
+<script>setTimeout(function(){ document.getElementById('modal-success-bg').style.display='none'; }, 3500);</script>
+<?php unset($_SESSION['success_message']); endif; ?>
 <a class="btn" href="index.php" style="margin:16px 0 8px 0;display:inline-block;">&larr; Retour à l'accueil</a>
 <?php include 'navbar.php'; ?>
 <div class="welcome-section">

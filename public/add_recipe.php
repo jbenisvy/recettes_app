@@ -183,6 +183,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Récupérer les catégories
 $categories = $pdo->query('SELECT * FROM categories')->fetchAll(PDO::FETCH_ASSOC);
 // Récupérer les tags
+// Affichage d'une alerte JS sur succès
+if (!empty($_SESSION['success_message'])) {
+    echo '<div class="modal-success-bg" id="modal-success-bg">
+      <div class="modal-success">
+        <span class="modal-icon">✅</span>
+        <h2>Succès</h2>
+        <div>' . htmlspecialchars($_SESSION['success_message']) . '</div>
+        <button class="modal-btn" onclick="document.getElementById(\'modal-success-bg\').style.display=\'none\';">Fermer</button>
+      </div>
+    </div>';
+    echo '<script>setTimeout(function(){ document.getElementById(\'modal-success-bg\').style.display=\'none\'; }, 3500);</script>';
+    unset($_SESSION['success_message']);
+}
+
 $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -200,8 +214,10 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
 </head>
 <body>
     <?php include 'navbar.php'; ?>
+    <link rel="stylesheet" href="assets/css/recipe-highlight.css">
+<link rel="stylesheet" href="assets/css/modal-success.css">
     <div class="container">
-        <h1>Ajouter une recette</h1>
+        <h1 class="recipe-title-highlight" id="dynamic-recipe-title">Créer une nouvelle recette</h1>
         <a href="import_recipe.php" class="btn btn-secondary" style="float:right;margin-bottom:10px;">Importer une recette depuis une URL</a>
         
         <?php if (!empty($errors)): ?>
@@ -249,7 +265,19 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
             </script>
             <br><br><br>
             <label for="title">Titre :</label>
-            <input type="text" id="title" name="title" value="<?php echo htmlspecialchars($title); ?>" required><br><br>
+            <input type="text" id="title" name="title" value="<?php echo htmlspecialchars($title); ?>" required oninput="updateRecipeTitle()"><br><br>
+<script>
+function updateRecipeTitle() {
+    const input = document.getElementById('title');
+    const display = document.getElementById('dynamic-recipe-title');
+    if (input.value.trim()) {
+        display.textContent = 'Nouvelle recette : ' + input.value.trim();
+    } else {
+        display.textContent = 'Créer une nouvelle recette';
+    }
+}
+document.addEventListener('DOMContentLoaded', updateRecipeTitle);
+</script>
             <textarea name="description" placeholder="Description"><?php echo htmlspecialchars($description); ?></textarea><br>
             
             <div id="ingredients-select-group">
@@ -264,15 +292,52 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
                     ?>
                 </select>
                 <input type="text" id="ingredient-other" placeholder="Nom de l'ingrédient" style="width:160px;display:none;">
-                <input type="text" id="ingredient-quantity" placeholder="Quantité">
-                <select id="ingredient-unit">
-                    <option value="">Unité</option>
-                    <option value="g">grammes</option>
-                    <option value="kg">kg</option>
-                    <option value="ml">ml</option>
-                    <option value="cl">cl</option>
-                    <option value="l">litres</option>
-                    <option value="càs">cuillère à soupe</option>
+                <input type="text" id="ingredient-quantity" placeholder="Quantité" style="width:90px;">
+                <select id="ingredient-unit" style="width:180px;"></select>
+                <script src="vendor/select2.min.js"></script>
+                <script>
+                $(document).ready(function() {
+                    // Charger dynamiquement les unités depuis units.php
+                    function fetchUnits(callback) {
+                        $.getJSON('units.php', function(units) {
+                            const select = $('#ingredient-unit');
+                            select.empty();
+                            select.append('<option value="">Unité</option>');
+                            units.forEach(function(u) {
+                                select.append('<option value="'+u.id+'">'+u.name+'</option>');
+                            });
+                            if (callback) callback();
+                        });
+                    }
+                    fetchUnits(function() {
+                        $('#ingredient-unit').select2({
+                            placeholder: "Choisir une unité",
+                            allowClear: true,
+                            tags: true,
+                            language: {
+                                noResults: function(params) {
+                                    return 'Aucune unité trouvée. Appuyez sur Entrée pour ajouter.';
+                                }
+                            }
+                        });
+                    });
+
+                    // Ajout dynamique d'une unité
+                    $('#ingredient-unit').on('select2:select', function(e) {
+                        const data = e.params.data;
+                        if (data.id && data._resultId && data._resultId.startsWith('select2-ingredient-unit-result-new-')) {
+                            // Nouvelle unité à ajouter
+                            $.post('add_unit.php', { name: data.text }, function(resp) {
+                                if (resp && resp.id) {
+                                    // Ajoute et sélectionne l'unité
+                                    const newOption = new Option(resp.name, resp.id, true, true);
+                                    $('#ingredient-unit').append(newOption).trigger('change');
+                                }
+                            }, 'json');
+                        }
+                    });
+                });
+                </script>
                     <option value="càc">cuillère à café</option>
                     <option value="pincée">pincée</option>
                     <option value="__autre__">autre...</option>

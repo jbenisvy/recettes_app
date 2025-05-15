@@ -39,6 +39,16 @@
 - Prévention du comportement par défaut au clic (évite l'ouverture du menu contextuel du navigateur).
 - La navigation est désormais cohérente et fonctionnelle sur toutes les pages, y compris sur mobile.
 
+## [2025-05-14] Amélioration UX : Recherche dynamique dans la liste des ingrédients
+
+- Ajout d'un champ de recherche au-dessus de la liste déroulante des ingrédients dans la page d'édition de recette (`edit_recipe.php`).
+- Le champ permet de filtrer en temps réel la liste des ingrédients disponibles selon le texte tapé, facilitant la sélection dans une longue liste.
+- Style amélioré pour plus de visibilité et message d'aide si un filtre est actif.
+- Le script évite les doublons de champ de recherche même en cas de rechargement partiel de la page.
+- Un log en console permet de vérifier le bon chargement du script côté navigateur.
+
+> Cette amélioration a été faite suite à une demande utilisateur pour faciliter la gestion d'une longue liste d'ingrédients lors de la création ou modification de recettes.
+
 ## Objectif global
 Créer une application web complète de gestion de recettes de cuisine avec :
 - Inscription, connexion et gestion de profil utilisateur
