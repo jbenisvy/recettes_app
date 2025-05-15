@@ -276,6 +276,13 @@ $selected_tags = $selected_tags->fetchAll(PDO::FETCH_COLUMN);
         <textarea id="description" name="description"><?php echo htmlspecialchars($recipe['description']); ?></textarea><br><br>
 
         <label>Ingrédients :</label><br>
+<?php
+// --- Mapping id => nom des unités pour affichage JS ---
+$unitIdToName = [];
+foreach ($pdo->query('SELECT id, name FROM units') as $row) {
+    $unitIdToName[$row['id']] = $row['name'];
+}
+?>
 <div id="ingredients-group">
     <select id="ingredient-select">
         <option value="">Choisir un ingrédient</option>
@@ -297,6 +304,8 @@ $selected_tags = $selected_tags->fetchAll(PDO::FETCH_COLUMN);
     <input type="text" id="ingredient-unit-other" placeholder="Autre unité" style="width:90px; display:none;">
     <button type="button" id="add-ingredient">Ajouter</button>
     <script>
+    // Mapping id => nom des unités injecté en JS
+    var unitIdToName = <?php echo json_encode($unitIdToName, JSON_UNESCAPED_UNICODE); ?>;
     // Charger dynamiquement les unités depuis units.php
     fetch('units.php')
         .then(r => r.json())
@@ -357,7 +366,12 @@ function updateList() {
     list.innerHTML = '';
     ingredientsArr.forEach((ing, idx) => {
         const li = document.createElement('li');
-        li.textContent = ing.name + (ing.quantity ? ' : ' + ing.quantity : '') + (ing.unit ? ' ' + ing.unit : '');
+        // Correction : afficher le nom de l'unité si c'est un id
+        let unitDisplay = ing.unit;
+        if (unitDisplay && /^[0-9]+$/.test(unitDisplay) && unitIdToName[unitDisplay]) {
+            unitDisplay = unitIdToName[unitDisplay];
+        }
+        li.textContent = ing.name + (ing.quantity ? ' : ' + ing.quantity : '') + (unitDisplay ? ' ' + unitDisplay : '');
         const del = document.createElement('button');
         del.textContent = '✗';
         del.style.marginLeft = '10px';
