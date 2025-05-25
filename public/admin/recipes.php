@@ -8,10 +8,19 @@ $db = require __DIR__ . '/../../config/db.php';
 $pdo = new PDO("mysql:host={$db['host']};dbname={$db['dbname']};charset={$db['charset']}", $db['user'], $db['pass']);
 
 // Suppression
+$errorMessage = null;
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    $stmt = $pdo->prepare('DELETE FROM recipes WHERE id = ?');
-    $stmt->execute([$_GET['delete']]);
-    header('Location: recipes.php'); exit;
+    try {
+        $stmt = $pdo->prepare('DELETE FROM recipes WHERE id = ?');
+        $stmt->execute([$_GET['delete']]);
+        header('Location: recipes.php'); exit;
+    } catch (PDOException $e) {
+        if ($e->getCode() == '23000' && strpos($e->getMessage(), 'a foreign key constraint fails') !== false) {
+            $errorMessage = "Impossible de supprimer cette recette car elle est utilisée dans d'autres données (ex : commentaires, ingrédients, tags, etc.).";
+        } else {
+            $errorMessage = "Erreur lors de la suppression : " . htmlspecialchars($e->getMessage());
+        }
+    }
 }
 // Liste des recettes
 $stmt = $pdo->query('SELECT r.*, u.username, c.name as category FROM recipes r LEFT JOIN users u ON r.user_id = u.id LEFT JOIN categories c ON r.category_id = c.id ORDER BY r.created_at DESC LIMIT 100');
@@ -93,5 +102,12 @@ rinput.addEventListener('keyup', function() {
     }
 });
 </script>
+<?php if (!empty($errorMessage)): ?>
+<script>
+    window.onload = function() {
+        alert(<?php echo json_encode($errorMessage); ?>);
+    };
+</script>
+<?php endif; ?>
 </body>
 </html>

@@ -8,18 +8,17 @@ $db = require __DIR__ . '/../../config/db.php';
 $pdo = new PDO("mysql:host={$db['host']};dbname={$db['dbname']};charset={$db['charset']}", $db['user'], $db['pass']);
 
 // Suppression
-$error = '';
+$errorMessage = null;
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     try {
         $stmt = $pdo->prepare('DELETE FROM users WHERE id = ?');
         $stmt->execute([$_GET['delete']]);
         header('Location: users.php'); exit;
     } catch (PDOException $e) {
-        // Vérifie si c'est une erreur de contrainte étrangère
         if ($e->getCode() == '23000') {
-            $error = "Impossible de supprimer cet utilisateur : il a déjà créé des recettes ou d'autres données dépendent de lui.";
+            $errorMessage = "Impossible de supprimer cet utilisateur : il a déjà créé des recettes ou d'autres données dépendent de lui.";
         } else {
-            $error = "Erreur lors de la suppression : " . $e->getMessage();
+            $errorMessage = "Erreur lors de la suppression : " . $e->getMessage();
         }
     }
 }
@@ -96,11 +95,13 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 <div class="admin-content">
     <h1>Gestion des utilisateurs</h1>
-    <?php if (!empty($error)) : ?>
-        <div class="error" style="background:#ffd3d3;color:#b22;padding:10px 18px;border-radius:8px;margin-bottom:18px;">
-            <?php echo $error; ?>
-        </div>
-    <?php endif; ?>
+    <?php if (!empty($errorMessage)): ?>
+<script>
+    window.onload = function() {
+        alert(<?php echo json_encode($errorMessage); ?>);
+    };
+</script>
+<?php endif; ?>
     <div style="max-width:340px;margin-bottom:18px;">
         <input type="text" id="userSearch" placeholder="Rechercher un utilisateur..." style="width:100%;padding:10px 34px 10px 36px;border-radius:8px;border:1px solid #c9e2e2;font-size:1em;background:#f7fafc;outline:none;box-shadow:0 1px 4px rgba(44,124,123,0.06);">
         <span style="position:relative;left:-312px;top:-32px;color:#2c7c7b;font-size:1.2em;pointer-events:none;">&#128269;</span>

@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $name = trim($ing['name']);
                     $quantity = trim($ing['quantity']);
                     $unit = trim($ing['unit']);
-                    
+
                     // Recherche ou création de l'ingrédient
                     $stmt = $pdo->prepare('SELECT id FROM ingredients WHERE name = ?');
                     $stmt->execute([$name]);
@@ -152,10 +152,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([$name]);
                         $ingredient_id = $pdo->lastInsertId();
                     }
-                    
-                    // Association recette-ingrédient
-                    $stmt = $pdo->prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit) VALUES (?, ?, ?, ?)');
-                    $stmt->execute([$recipe_id, $ingredient_id, $quantity, $unit]);
+
+                    // Recherche ou création de l'unité
+                    $unit_id = null;
+                    if ($unit !== '') {
+                        $stmt = $pdo->prepare('SELECT id FROM units WHERE name = ?');
+                        $stmt->execute([$unit]);
+                        $unit_row = $stmt->fetch(PDO::FETCH_ASSOC);
+                        if ($unit_row) {
+                            $unit_id = $unit_row['id'];
+                        } else {
+                            $stmt = $pdo->prepare('INSERT INTO units (name) VALUES (?)');
+                            $stmt->execute([$unit]);
+                            $unit_id = $pdo->lastInsertId();
+                        }
+                    }
+
+                    // Association recette-ingrédient avec unit_id et unit (nom)
+                    $stmt = $pdo->prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit_id, unit) VALUES (?, ?, ?, ?, ?)');
+                    $stmt->execute([$recipe_id, $ingredient_id, $quantity, $unit_id, $unit]);
                 }
             }
 
@@ -210,6 +225,9 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
 
         <h1>Ajouter une recette</h1>
         <a href="import_recipe.php" class="btn btn-secondary" style="float:right;margin-bottom:10px;">Importer une recette depuis une URL</a>
+        <?php if (isset($_SESSION['email']) && $_SESSION['email'] === 'johny.benisvy@gmail.com'): ?>
+            <a href="import_recipe_scan.php" class="btn btn-secondary" style="float:right;margin-right:10px;margin-bottom:10px;">Importer le dernier scan (OCR)</a>
+        <?php endif; ?>
         
         <?php if (!empty($errors)): ?>
             <div class="alert alert-danger">

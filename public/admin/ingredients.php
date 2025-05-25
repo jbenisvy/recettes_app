@@ -14,10 +14,19 @@ if (isset($_POST['add_name']) && trim($_POST['add_name'])) {
     header('Location: ingredients.php'); exit;
 }
 // Suppression
+$errorMessage = null;
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    $stmt = $pdo->prepare('DELETE FROM ingredients WHERE id = ?');
-    $stmt->execute([$_GET['delete']]);
-    header('Location: ingredients.php'); exit;
+    try {
+        $stmt = $pdo->prepare('DELETE FROM ingredients WHERE id = ?');
+        $stmt->execute([$_GET['delete']]);
+        header('Location: ingredients.php'); exit;
+    } catch (PDOException $e) {
+        if ($e->getCode() == '23000' && strpos($e->getMessage(), 'a foreign key constraint fails') !== false) {
+            $errorMessage = "Impossible de supprimer cet ingrédient car il est utilisé dans une ou plusieurs recettes.\nVeuillez d’abord modifier ou supprimer les recettes qui utilisent cet ingrédient.";
+        } else {
+            $errorMessage = "Erreur lors de la suppression : " . htmlspecialchars($e->getMessage());
+        }
+    }
 }
 // Modification
 if (isset($_POST['edit_id'], $_POST['edit_name']) && is_numeric($_POST['edit_id'])) {
@@ -84,5 +93,12 @@ $ingredients = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </table>
     <a href="dashboard.php" class="btn">&larr; Retour au tableau de bord</a>
 </div>
+<?php if (!empty($errorMessage)): ?>
+<script>
+    window.onload = function() {
+        alert(<?php echo json_encode($errorMessage); ?>);
+    };
+</script>
+<?php endif; ?>
 </body>
 </html>
