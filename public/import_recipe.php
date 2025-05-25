@@ -3,15 +3,6 @@
 // Script PHP natif pour importer une recette depuis une URL et pré-remplir le formulaire d'ajout
 // À placer dans public/ ou à la racine selon ton organisation
 
-function extract_between($string, $start, $end) {
-    $string = ' ' . $string;
-    $ini = strpos($string, $start);
-    if ($ini == 0) return '';
-    $ini += strlen($start);
-    $len = strpos($string, $end, $ini) - $ini;
-    return trim(substr($string, $ini, $len));
-}
-
 $recipe = [
     'title' => '',
     'description' => '',
@@ -24,6 +15,49 @@ $recipe = [
     'image_url' => '',
     'tags' => [],
 ];
+
+$force_preview = false;
+if (!empty($_POST['ocr_data'])) {
+    $ocr = json_decode($_POST['ocr_data'], true);
+    file_put_contents('/tmp/debug_ocr_post.txt', print_r($_POST['ocr_data'], true));
+    file_put_contents('/tmp/debug_ocr_parsed.txt', print_r($ocr, true));
+    if ($ocr) {
+        $recipe['title'] = $ocr['titre'] ?? '';
+        $recipe['description'] = $ocr['description'] ?? '';
+        $recipe['ingredients'] = [];
+        if (!empty($ocr['ingredients'])) {
+            foreach ($ocr['ingredients'] as $ing) {
+                if (is_array($ing)) {
+                    $parts = [];
+                    if (!empty($ing['quantite'])) $parts[] = $ing['quantite'];
+                    if (!empty($ing['unite'])) $parts[] = $ing['unite'];
+                    if (!empty($ing['nom'])) $parts[] = $ing['nom'];
+                    $str = implode(' ', $parts);
+                    $recipe['ingredients'][] = trim($str);
+                } else {
+                    $recipe['ingredients'][] = $ing;
+                }
+            }
+        }
+        $recipe['steps'] = $ocr['etapes'] ?? [];
+        $recipe['category'] = $ocr['categorie'] ?? '';
+        $recipe['prep_time'] = $ocr['temps_preparation'] ?? '';
+        $recipe['cook_time'] = $ocr['temps_cuisson'] ?? '';
+        $recipe['difficulty'] = $ocr['difficulte'] ?? '';
+        $recipe['tags'] = $ocr['tags'] ?? [];
+        $force_preview = true;
+    }
+}
+
+function extract_between($string, $start, $end) {
+    $string = ' ' . $string;
+    $ini = strpos($string, $start);
+    if ($ini == 0) return '';
+    $ini += strlen($start);
+    $len = strpos($string, $end, $ini) - $ini;
+    return trim(substr($string, $ini, $len));
+}
+
 
 if (!empty($_POST['url'])) {
     $url = $_POST['url'];
@@ -126,42 +160,63 @@ if (!empty($_POST['url'])) {
     <button type="submit">Analyser</button>
 </form>
 <?php if (!empty($error)) { echo '<p style="color:red">'.$error.'</p>'; } ?>
-<?php if ($recipe['title']): ?>
+<?php
+// Détection des champs obligatoires manquants
+$missing_fields = [];
+if ($recipe['title'] === '') $missing_fields[] = 'Titre';
+if (empty($recipe['ingredients'])) $missing_fields[] = 'Ingrédients';
+if (empty($recipe['steps'])) $missing_fields[] = 'Étapes';
+if ($recipe['category'] === '') $missing_fields[] = 'Catégorie';
+?>
+<?php if ($force_preview): ?>
     <h2>Prévisualisation de la recette importée</h2>
+    <?php if (!empty($missing_fields)): ?>
+        <div class="alert-missing">
+            <strong>Champs obligatoires manquants :</strong> <?php echo implode(', ', $missing_fields); ?>.<br>
+            Merci de compléter ces champs avant de valider.
+        </div>
+    <?php endif; ?>
     <form method="post" action="add_recipe.php">
-        <label>Titre :</label>
-        <input type="text" name="title" value="<?php echo htmlspecialchars($recipe['title']); ?>">
-
+        <label<?php if ($recipe['title'] === '') echo ' class="missing-label"'; ?>>Titre :</label>
+        <input type="text" name="title" value="<?php echo htmlspecialchars($recipe['title']); ?>"<?php if ($recipe['title'] === '') echo ' class="missing-field"'; ?>>
+        <br>
         <label>Description :</label>
         <textarea name="description"><?php echo htmlspecialchars($recipe['description']); ?></textarea>
-
-        <label>Catégorie :</label>
-        <input type="text" name="category" value="<?php echo htmlspecialchars($recipe['category']); ?>">
-
-        <label>Ingrédients :</label>
-        <textarea name="ingredients"><?php echo htmlspecialchars(implode("\n", $recipe['ingredients'])); ?></textarea>
-
-        <label>Étapes :</label>
-        <textarea name="steps"><?php echo htmlspecialchars(implode("\n", $recipe['steps'])); ?></textarea>
-
-        <label>Temps de préparation :</label>
+        <br>
+        <label<?php if (empty($recipe['ingredients'])) echo ' class="missing-label"'; ?>>Ingrédients :</label>
+        <ul>
+        <?php if (!empty($recipe['ingredients'])): ?>
+            <?php foreach ($recipe['ingredients'] as $ing): ?>
+                <li><input type="text" name="ingredients[]" value="<?php echo htmlspecialchars($ing); ?>"></li>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <li><input type="text" name="ingredients[]" value="" class="missing-field"></li>
+        <?php endif; ?>
+        </ul>
+        <label<?php if (empty($recipe['steps'])) echo ' class="missing-label"'; ?>>Étapes :</label>
+        <textarea name="steps"<?php if (empty($recipe['steps'])) echo ' class="missing-field"'; ?>><?php echo htmlspecialchars(is_array($recipe['steps']) ? implode("\n", $recipe['steps']) : $recipe['steps']); ?></textarea>
+        <br>
+        <label<?php if ($recipe['category'] === '') echo ' class="missing-label"'; ?>>Catégorie :</label>
+        <input type="text" name="category" value="<?php echo htmlspecialchars($recipe['category']); ?>"<?php if ($recipe['category'] === '') echo ' class="missing-field"'; ?>>
+        <br>
+        <label>Temps de préparation (min) :</label>
         <input type="text" name="prep_time" value="<?php echo htmlspecialchars($recipe['prep_time']); ?>">
-
-        <label>Temps de cuisson :</label>
+        <br>
+        <label>Temps de cuisson (min) :</label>
         <input type="text" name="cook_time" value="<?php echo htmlspecialchars($recipe['cook_time']); ?>">
-
+        <br>
         <label>Difficulté :</label>
         <input type="text" name="difficulty" value="<?php echo htmlspecialchars($recipe['difficulty']); ?>">
-
+        <br>
         <label>Tags :</label>
-        <input type="text" name="tags" value="<?php echo htmlspecialchars(implode(", ", $recipe['tags'])); ?>">
-
+        <input type="text" name="tags" value="<?php echo htmlspecialchars(is_array($recipe['tags']) ? implode(", ", $recipe['tags']) : $recipe['tags']); ?>">
+        <br>
         <label>Image principale :</label>
         <?php if ($recipe['image_url']): ?>
             <img src="<?php echo htmlspecialchars($recipe['image_url']); ?>" class="preview-img"><br>
         <?php endif; ?>
         <input type="text" name="image_url" value="<?php echo htmlspecialchars($recipe['image_url']); ?>">
-
+        <br>
         <button type="submit">Créer la recette</button>
     </form>
 <?php endif; ?>

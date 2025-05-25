@@ -224,9 +224,191 @@ $all_tags = $pdo->query('SELECT * FROM tags ORDER BY name')->fetchAll(PDO::FETCH
     <div class="container">
 
         <h1>Ajouter une recette</h1>
-        <a href="import_recipe.php" class="btn btn-secondary" style="float:right;margin-bottom:10px;">Importer une recette depuis une URL</a>
+        <button id="import-url-btn" type="button" class="btn btn-secondary" style="float:right;margin-bottom:10px;" onclick="window.location.href='import_recipe.php'">Importer une recette depuis une URL</button>
         <?php if (isset($_SESSION['email']) && $_SESSION['email'] === 'johny.benisvy@gmail.com'): ?>
-            <a href="import_recipe_scan.php" class="btn btn-secondary" style="float:right;margin-right:10px;margin-bottom:10px;">Importer le dernier scan (OCR)</a>
+            <button id="import-ocr-btn" type="button" class="btn btn-secondary" style="float:right;margin-right:10px;margin-bottom:10px;">Importer une recette scannée</button>
+<input type="file" id="ocr-file" accept="image/*" style="display:none;">
+<div id="ocr-progress"></div>
+<script src="https://unpkg.com/tesseract.js@5.0.1/dist/tesseract.min.js"></script>
+<script>
+const currentUser = '<?php echo $_SESSION['email'] ?? ""; ?>';
+document.getElementById('import-ocr-btn').addEventListener('click', function() {
+    if (currentUser !== 'johny.benisvy@gmail.com') {
+        alert("Seul l'administrateur johny.benisvy@gmail.com peut utiliser cette fonctionnalité.");
+        return;
+    }
+    document.getElementById('ocr-file').click();
+});
+document.getElementById('ocr-file').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const progressDiv = document.getElementById('ocr-progress');
+    progressDiv.textContent = "Analyse OCR en cours...";
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        Tesseract.recognize(
+            e.target.result,
+            'fra+eng',
+            {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        progressDiv.textContent = `OCR : ${Math.round(m.progress * 100)}%`;
+                    }
+                }
+            }
+        ).then(({ data: { text } }) => {
+            progressDiv.textContent = "OCR terminé.";
+            if (!text.trim()) {
+                alert("Erreur OCR : aucun texte extrait.");
+                return;
+            }
+            const recette = parseRecipeFromText(text);
+            // Envoi POST vers import_recipe.php avec les données OCR
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'import_recipe.php';
+            form.style.display = 'none';
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ocr_data';
+            input.value = JSON.stringify(recette);
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        });
+    };
+    reader.readAsDataURL(file);
+});
+function parseRecipeFromText(text) {
+    text = text.replace(/\r/g, '');
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+    let recette = {
+        titre: '',
+        description: '',
+        ingredients: [],
+        etapes: [],
+        categorie: '',
+        temps_preparation: '',
+        temps_cuisson: '',
+        difficulte: '',
+        tags: []
+    };
+
+    // Heuristiques pour deviner les sections si les mots-clés sont absents ou mal reconnus
+    const regexIngredients = /(ingr[ée]dients?|ngredients?|liste des ing|ingredients?)/i;
+    const regexEtapes = /(étapes?|etapes?|etaps?|préparation|preparation|etape de la recette|etapes de la recette)/i;
+    const regexIngredientLine = /^([\d,.]+)\s*([a-zA-Zéûèêàôîâç%]*)?\s*([\w\s'’\-éèàêâîôûç]+)$/;
+    const regexEtapeLine = /^\s*([\d]+)[\.|\-|\)]\s*(.+)$/;
+    let section = 'titre';
+    let titreLines = [];
+    let descriptionLines = [];
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        // Changement de section selon les mots-clés
+        if (regexIngredients.test(line)) { section = 'ingredients'; continue; }
+        if (regexEtapes.test(line)) { section = 'etapes'; continue; }
+        if (/^description/i.test(line)) { section = 'description'; continue; }
+        if (/cat[ée]gorie/i.test(line)) { section = 'categorie'; recette.categorie = line.replace(/.*?:\s*/i, ''); continue; }
+        if (/temps\s*de\s*pr[ée]paration/i.test(line)) { recette.temps_preparation = line.replace(/.*?:\s*/i, '').replace(/\D/g, ''); continue; }
+        if (/temps\s*de\s*cuisson/i.test(line)) { recette.temps_cuisson = line.replace(/.*?:\s*/i, '').replace(/\D/g, ''); continue; }
+        if (/difficult[ée]/i.test(line)) { recette.difficulte = line.replace(/.*?:\s*/i, ''); continue; }
+        if (/tags?/i.test(line)) { recette.tags = line.replace(/.*?:\s*/i, '').split(/[,;]/).map(t => t.trim()); continue; }
+
+        // Heuristique : si on est hors section, deviner la section
+        if (section === 'titre' || section === 'description') {
+            // Si la ligne ressemble à un ingrédient, basculer en mode ingrédients
+            if (regexIngredientLine.test(line)) {
+                section = 'ingredients';
+            } else if (regexEtapeLine.test(line)) {
+                section = 'etapes';
+            }
+        }
+
+        // Remplissage intelligent
+        if (section === 'titre') {
+            titreLines.push(line);
+        } else if (section === 'description') {
+            descriptionLines.push(line);
+        } else if (section === 'ingredients') {
+            let match = line.match(regexIngredientLine);
+            if (match) {
+                let quantite = match[1] ? match[1].replace(',', '.') : '';
+                let unite = match[2] ? match[2] : '';
+                let nom = match[3] ? match[3] : line;
+                recette.ingredients.push({ nom: nom.trim(), quantite: quantite.trim(), unite: unite.trim() });
+            } else if (line.length > 0) {
+                recette.ingredients.push({ nom: line, quantite: '', unite: '' });
+            }
+        } else if (section === 'etapes') {
+            let matchEtape = line.match(regexEtapeLine);
+            if (matchEtape) {
+                recette.etapes.push(matchEtape[2].trim());
+            } else if (line.length > 0) {
+                recette.etapes.push(line);
+            }
+        }
+    }
+    // Si pas d'étapes trouvées, considérer les lignes suivantes les ingrédients comme étapes si elles commencent par un chiffre
+    if (recette.etapes.length === 0 && recette.ingredients.length > 0) {
+        let possibleEtapes = recette.ingredients.filter(ing => /^\d/.test(ing.nom));
+        if (possibleEtapes.length > 0) {
+            recette.etapes = possibleEtapes.map(ing => ing.nom);
+            recette.ingredients = recette.ingredients.filter(ing => !/^\d/.test(ing.nom));
+        }
+    }
+    recette.titre = titreLines.join(' ').trim();
+    recette.description = descriptionLines.join(' ').trim();
+    recette.ingredients = recette.ingredients.filter(l => l.nom.length > 0);
+    recette.etapes = recette.etapes.filter(l => l.length > 0);
+
+    return recette;
+}
+function fillFormWithRecipe(recette) {
+    document.querySelector('[name="title"]').value = recette.titre || '';
+    document.querySelector('[name="description"]').value = recette.description || '';
+    document.querySelector('[name="steps"]').value = recette.etapes.join('\n');
+    if (recette.categorie) {
+        let select = document.querySelector('[name="category_id"]');
+        for (let opt of select.options) {
+            if (opt.text.toLowerCase().includes(recette.categorie.toLowerCase())) {
+                select.value = opt.value;
+                break;
+            }
+        }
+    }
+    document.querySelector('[name="prep_time"]').value = recette.temps_preparation || '';
+    document.querySelector('[name="cook_time"]').value = recette.temps_cuisson || '';
+    if (recette.difficulte) {
+        let select = document.querySelector('[name="difficulty"]');
+        for (let opt of select.options) {
+            if (opt.text.toLowerCase().includes(recette.difficulte.toLowerCase())) {
+                select.value = opt.value;
+                break;
+            }
+        }
+    }
+    if (recette.tags.length) {
+        let select = document.getElementById('tags-select');
+        for (let option of select.options) {
+            option.selected = recette.tags.some(tag => option.text.toLowerCase().includes(tag.toLowerCase()));
+        }
+        if (window.$ && $(select).data('select2')) $(select).trigger('change');
+    }
+    if (recette.ingredients.length) {
+        for (const ing of recette.ingredients) {
+            $('#ingredients-select').val(ing.nom).trigger('change');
+            $('#ingredient-quantity').val(ing.quantite);
+            $('#ingredient-unit').val(ing.unite);
+            $('#add-ingredient-btn').click();
+        }
+    }
+    ['title','steps','category_id'].forEach(name => {
+        let el = document.querySelector(`[name="${name}"]`);
+        if (el) el.style.background = el.value.trim() === '' ? '#ffe0e0' : '';
+    });
+}
+</script>
         <?php endif; ?>
         
         <?php if (!empty($errors)): ?>
