@@ -18,17 +18,36 @@ try {
     die('Erreur de connexion à la base de données : ' . $e->getMessage());
 }
 
-// Initialiser les variables
+// Pré-remplissage depuis l'import OCR IA (scan)
+if (isset($_SESSION['import_recipe_ocr'])) {
+    $import = $_SESSION['import_recipe_ocr'];
+    $title = isset($import['title']) ? trim($import['title']) : '';
+    $description = isset($import['description']) ? trim($import['description']) : '';
+    $steps = isset($import['steps']) ? (is_array($import['steps']) ? implode("\n", $import['steps']) : trim($import['steps'])) : '';
+    $category_id = null; // à mapper si possible
+    $prep_time = isset($import['prep_time']) ? intval($import['prep_time']) : 0;
+    $cook_time = isset($import['cook_time']) ? intval($import['cook_time']) : 0;
+    $difficulty = isset($import['difficulty']) ? $import['difficulty'] : 'Facile';
+    // Encodage des ingrédients pour le champ JS
+    if (isset($import['ingredients']) && is_array($import['ingredients'])) {
+        $ingredients_data = json_encode($import['ingredients'], JSON_UNESCAPED_UNICODE);
+    } else {
+        $ingredients_data = '';
+    }
+    unset($_SESSION['import_recipe_ocr']); // On vide après usage
+} else {
+    $title = trim($_POST['title'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $steps = trim($_POST['steps'] ?? '');
+    $category_id = $_POST['category_id'] ?? null;
+    $prep_time = intval($_POST['prep_time'] ?? 0);
+    $cook_time = intval($_POST['cook_time'] ?? 0);
+    $difficulty = $_POST['difficulty'] ?? 'Facile';
+    $ingredients_data = $_POST['ingredients_data'] ?? '';
+}
 $errors = [];
-$title = trim($_POST['title'] ?? '');
-$description = trim($_POST['description'] ?? '');
-$steps = trim($_POST['steps'] ?? '');
-$category_id = $_POST['category_id'] ?? null;
-$prep_time = intval($_POST['prep_time'] ?? 0);
-$cook_time = intval($_POST['cook_time'] ?? 0);
-$difficulty = $_POST['difficulty'] ?? 'Facile';
-$ingredients_data = $_POST['ingredients_data'] ?? '';
 $media_files = [];
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validation

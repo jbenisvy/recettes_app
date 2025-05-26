@@ -3,6 +3,40 @@
 // Script PHP natif pour importer une recette depuis une URL et pré-remplir le formulaire d'ajout
 // À placer dans public/ ou à la racine selon ton organisation
 
+if (isset($_FILES['scan']) && $_FILES['scan']['error'] === UPLOAD_ERR_OK) {
+    $tmp_name = $_FILES['scan']['tmp_name'];
+    $filename = basename($_FILES['scan']['name']);
+    $upload_dir = __DIR__ . '/uploads/';
+    if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+    $dest_path = $upload_dir . $filename;
+    move_uploaded_file($tmp_name, $dest_path);
+
+    // Appel du script Python
+    $cmd = "python3 /home/johny/Documents/Scan_Images/app.py " . escapeshellarg($dest_path);
+    $json = shell_exec($cmd);
+
+    if (empty($json) || strpos($json, 'Erreur :') === 0) {
+        echo "<div style='color:red'>Erreur lors de l'analyse IA :<br>$json</div>";
+        $data = [];
+    } else {
+        $data = json_decode($json, true);
+    }
+} else {
+    $data = [];
+}
+
+$titre = htmlspecialchars($data['titre'] ?? '');
+$ingredients = htmlspecialchars(json_encode($data['ingredients'] ?? [], JSON_UNESCAPED_UNICODE));
+$etapes = htmlspecialchars(json_encode($data['etapes'] ?? [], JSON_UNESCAPED_UNICODE));
+$description = htmlspecialchars($data['description'] ?? '');
+$temps_preparation = htmlspecialchars($data['temps_preparation'] ?? '');
+$temps_cuisson = htmlspecialchars($data['temps_cuisson'] ?? '');
+$difficulte = htmlspecialchars($data['difficulte'] ?? '');
+$tags = htmlspecialchars(json_encode($data['tags'] ?? [], JSON_UNESCAPED_UNICODE));
+$categorie = htmlspecialchars($data['categorie'] ?? '');
+?>
+
+<?php
 $recipe = [
     'title' => '',
     'description' => '',
