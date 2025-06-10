@@ -1,4 +1,8 @@
 <?php
+// Affichage des erreurs pour le debug
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 session_start();
 if (empty($_SESSION['user_id']) || empty($_SESSION['is_admin'])) {
     header('Location: login.php'); exit;
@@ -14,10 +18,19 @@ if (isset($_POST['add_name']) && trim($_POST['add_name'])) {
     header('Location: units.php'); exit;
 }
 // Suppression
+$errorMessage = null;
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    $stmt = $pdo->prepare('DELETE FROM units WHERE id = ?');
-    $stmt->execute([$_GET['delete']]);
-    header('Location: units.php'); exit;
+    try {
+        $stmt = $pdo->prepare('DELETE FROM units WHERE id = ?');
+        $stmt->execute([$_GET['delete']]);
+        header('Location: units.php'); exit;
+    } catch (PDOException $e) {
+        if ($e->getCode() == '23000' && strpos($e->getMessage(), 'a foreign key constraint fails') !== false) {
+            $errorMessage = "Impossible de supprimer cette unité car elle est utilisée dans une ou plusieurs recettes.\nVeuillez d’abord modifier ou supprimer les ingrédients qui utilisent cette unité.";
+        } else {
+            $errorMessage = "Erreur lors de la suppression : " . htmlspecialchars($e->getMessage());
+        }
+    }
 }
 // Modification
 if (isset($_POST['edit_id'], $_POST['edit_name']) && is_numeric($_POST['edit_id'])) {
@@ -84,5 +97,12 @@ $units = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </table>
     <a href="dashboard.php" class="btn">&larr; Retour au tableau de bord</a>
 </div>
+<?php if (!empty($errorMessage)): ?>
+<script>
+    window.onload = function() {
+        alert(<?php echo json_encode($errorMessage); ?>);
+    };
+</script>
+<?php endif; ?>
 </body>
 </html>

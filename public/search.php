@@ -247,6 +247,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="recipe-footer">
                         <span class="author">par <?php echo htmlspecialchars($recipe['username']); ?></span>
                         <a href="recipe.php?id=<?php echo $recipe['id']; ?>" class="view-recipe">Voir la recette</a>
+<?php if ((isset($_SESSION['user_id']) && $_SESSION['user_id'] == $recipe['user_id']) || (!empty($_SESSION['is_admin']) && $_SESSION['is_admin'])): ?>
+    <a href="edit_recipe.php?id=<?php echo $recipe['id']; ?>" class="btn btn-edit" style="margin-bottom:8px;">✏️ Modifier</a>
+    <a href="delete_recipe.php?id=<?php echo $recipe['id']; ?>" onclick="return confirm('Supprimer cette recette ?');" class="btn btn-delete" style="background:#c00;color:#fff;margin-left:8px;">🗑️ Supprimer</a>
+<?php endif; ?>
                     </div>
                 </div>
             </div>

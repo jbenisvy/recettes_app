@@ -37,6 +37,17 @@ $pageTitle = "Accueil - Gestion des Recettes";
 $additionalCss = ["css/home.css"];
 ob_start(); ?>
 
+
+
+<?php session_start(); ?>
+<body>
+<?php if (!empty($_SESSION['success_message'])): ?>
+    <script>
+        setTimeout(function() { alert(<?php echo json_encode($_SESSION['success_message']); ?>); }, 100);
+    </script>
+    <?php unset($_SESSION['success_message']); ?>
+<?php endif; ?>
+
 <div class="welcome-section">
     <h1>Bienvenue sur l'application de gestion de recettes !</h1>
     <p class="welcome-text">Découvrez, partagez et organisez vos recettes préférées.</p>
@@ -70,8 +81,9 @@ ob_start(); ?>
                     </div>
                     <p class="recipe-description"><?php echo substr(htmlspecialchars($recipe['description']), 0, 100) . '...'; ?></p>
                     <a href="recipe.php?id=<?php echo $recipe['id']; ?>" class="view-recipe">Voir la recette</a>
-                    <?php if (!empty($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
+                    <?php if ((isset($_SESSION['user_id']) && $_SESSION['user_id'] == $recipe['user_id']) || (!empty($_SESSION['is_admin']) && $_SESSION['is_admin'])): ?>
                         <a href="edit_recipe.php?id=<?php echo $recipe['id']; ?>" class="btn btn-edit" style="margin-bottom:8px;">✏️ Modifier</a>
+                        <a href="delete_recipe.php?id=<?php echo $recipe['id']; ?>" onclick="return confirm('Supprimer cette recette ?');" class="btn btn-delete" style="background:#c00;color:#fff;margin-left:8px;">🗑️ Supprimer</a>
                     <?php endif; ?>
                 </div>
             </div>

@@ -81,6 +81,16 @@ if (isset($_SESSION['user_id'])) {
 $pageTitle = htmlspecialchars($recipe['title']);
 ob_start();
 ?>
+<body>
+<?php if ((isset($_SESSION['user_id']) && isset($recipe['user_id']) && $_SESSION['user_id'] == $recipe['user_id']) || (!empty($_SESSION['is_admin']) && $_SESSION['is_admin'])): ?>
+    <a href="delete_recipe.php?id=<?php echo $recipe['id']; ?>" onclick="return confirm('Supprimer cette recette ?');" class="btn btn-delete" style="background:#c00;color:#fff;float:right;margin:20px 0 0 20px;">🗑️ Supprimer</a>
+<?php endif; ?>
+<?php if (!empty($_SESSION['success_message'])): ?>
+    <script>
+        setTimeout(function() { alert(<?php echo json_encode($_SESSION['success_message']); ?>); }, 100);
+    </script>
+    <?php unset($_SESSION['success_message']); ?>
+<?php endif; ?>
 <style>
 .recipe-page-container {
     max-width: 760px;

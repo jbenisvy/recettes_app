@@ -86,16 +86,11 @@ Les prochaines étapes seront ajoutées ici au fur et à mesure.
 ---
 
 ## Historique des ajouts
-- 15/05/2025 : **Gestion avancée des unités et ingrédients, fiabilisation et modernisation UX**
-    - Nettoyage et unicité stricte des tables `units` et `ingredients` (suppression des doublons, collation insensible à la casse, noms en majuscules sans accents).
-    - Ajout ou correction des contraintes d'unicité SQL sur `units.name` et `ingredients.name`.
-    - Alimentation massive de la table `units` avec toutes les unités courantes de cuisine (requête adaptée MySQL).
-    - Correction du formulaire de création de recette : la liste déroulante des unités est à nouveau dynamique et alimentée via AJAX depuis la base.
-    - Suppression des `<option>` HTML résiduels hors du `<select>` pour les unités.
-    - Amélioration de la gestion des erreurs SQL lors de l'insertion des unités.
-    - Mise en place d'une boîte de confirmation stylée (modal) après création, modification ou suppression d'une recette (remplace les alertes JS classiques).
-    - Documentation et scripts SQL ajoutés pour migration/cleaning des données existantes.
-    - Rappel de la procédure de déploiement via `deploy.sh` et bonnes pratiques pour la mise à jour distante.
+- 24/04/2025 : **Refonte complète de la page d'accueil et modernisation du design**
+    - Mise en place d'une grille responsive pour les recettes (`.recipes-grid`), avec affichage en colonnes sur desktop et en pile sur mobile.
+    - Création de cartes recettes modernes (`.recipe-card`) : fond blanc, ombre, coins arrondis, effet au survol.
+    - Intégration d'un cadre image carré centré pour chaque recette, avec gestion de l'affichage homogène (object-fit: cover, fond doux, image par défaut stylée).
+    - Ajout d'un badge catégorie, d'un affichage clair du titre, auteur, description, et boutons d'action dans chaque carte.
     - Ajout et application du fichier `public/css/home.css` pour tous les styles spécifiques à l'accueil.
     - Correction des bugs d'affichage liés à la structure PHP (suppression des doublons, gestion correcte du buffer de sortie, injection via `$pageContent` dans le template `base.php`).
     - Amélioration du contraste et de la lisibilité du bandeau d'accueil (titre en blanc, overlay sombre sur le dégradé, ombre portée).
@@ -104,49 +99,3 @@ Les prochaines étapes seront ajoutées ici au fur et à mesure.
 - 24/04/2025 : Ajout de la structure SQL pour la liste des courses.
 - 24/04/2025 : Création du devbook et ajout des étapes initiales.
 - 24/04/2025 : Ajout de la section sur la structure de la base de données.
-
----
-
-## Évolutions et actions après le 24/04/2025
-
-### 28/04/2025 — Harmonisation du formulaire d’ajout de recette
-- Le formulaire d’ajout de recette a été harmonisé avec celui de l’ancien site pour faciliter la transition des utilisateurs.
-- Modifications de structure HTML/PHP, validation et ergonomie.
-
-### 30/04/2025 — Migration SQL : gestion des réinitialisations de mot de passe
-- Ajout d’une migration SQL (`2025_04_30_create_password_resets.sql`) pour permettre la réinitialisation sécurisée des mots de passe utilisateurs.
-
-### Fin avril 2025 — Corrections et ajustements sur le déploiement
-- Refonte et test du script de déploiement (`deploy.sh`).
-- Harmonisation du chemin de déploiement vers `public_html/Recettes_Application`.
-- Vérification et application de la règle Apache `RewriteRule ^$ /Recettes_Application/ [L]` pour la redirection de la racine du site.
-
-### Début mai 2025 — Correction de bugs sur l’édition de recette
-- Correction d’un bug PHP lors de l’édition de recette : "Array to string conversion" dans `edit_recipe.php` (ligne 139).
-- Correction d’un problème d’envoi de headers après affichage prématuré ("headers already sent").
-- Conseils appliqués pour corriger le code sur le serveur distant.
-
-### Mai 2025 — Gestion du dépôt Git et synchronisation GitHub
-- Vérification et réinitialisation de l’URL du dépôt distant : `git remote set-url origin https://github.com/jbenisvy/recettes_app.git`.
-- Conseils pour l’utilisation de `git add`, `git push` et le clonage dans le bon dossier côté o2switch.
-
-### Printemps 2025 — Documentation et migrations
-- Utilisation de migrations Doctrine pour faire évoluer ou corriger la base de données.
-- Ajustements mineurs sur la structure des tables et la logique de l’application.
-
----
-
-**Synthèse chronologique**
-
-| Date         | Action principale                                                                                   |
-|--------------|----------------------------------------------------------------------------------------------------|
-| 28/04/2025   | Harmonisation du formulaire d’ajout de recette avec l’ancien site                                  |
-| 30/04/2025   | Ajout d’une migration SQL pour la gestion des réinitialisations de mot de passe                    |
-| Fin avril    | Correction du script de déploiement, harmonisation des chemins, vérification des règles Apache      |
-| Début mai    | Correction de bugs sur l’édition de recette (PHP : Array to string, headers already sent)          |
-| Mai 2025     | Vérification et synchronisation du dépôt Git avec GitHub, consignes de déploiement                 |
-| Printemps 25 | Ajustements sur la base de données via migrations Doctrine (évolutions ou corrections mineures)     |
-
----
-
-Toutes ces évolutions sont issues de l’analyse des fichiers de restauration, migrations SQL, scripts et logs techniques retrouvés après la perte du dossier initial. Ce suivi permet d’assurer une traçabilité complète et actualisée du projet Recettes App.

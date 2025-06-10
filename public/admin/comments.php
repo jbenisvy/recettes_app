@@ -8,10 +8,19 @@ $db = require __DIR__ . '/../../config/db.php';
 $pdo = new PDO("mysql:host={$db['host']};dbname={$db['dbname']};charset={$db['charset']}", $db['user'], $db['pass']);
 
 // Suppression d'un commentaire
+$errorMessage = null;
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    $stmt = $pdo->prepare('DELETE FROM comments WHERE id = ?');
-    $stmt->execute([$_GET['delete']]);
-    header('Location: comments.php'); exit;
+    try {
+        $stmt = $pdo->prepare('DELETE FROM comments WHERE id = ?');
+        $stmt->execute([$_GET['delete']]);
+        header('Location: comments.php'); exit;
+    } catch (PDOException $e) {
+        if ($e->getCode() == '23000' && strpos($e->getMessage(), 'a foreign key constraint fails') !== false) {
+            $errorMessage = "Impossible de supprimer ce commentaire car il est lié à d'autres données.";
+        } else {
+            $errorMessage = "Erreur lors de la suppression : " . htmlspecialchars($e->getMessage());
+        }
+    }
 }
 // Liste des commentaires
 $stmt = $pdo->query('SELECT c.*, u.username, r.title as recipe_title FROM comments c LEFT JOIN users u ON c.user_id = u.id LEFT JOIN recipes r ON c.recipe_id = r.id ORDER BY c.created_at DESC LIMIT 100');
@@ -58,5 +67,12 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </table>
     <a href="dashboard.php" class="btn">&larr; Retour au tableau de bord</a>
 </div>
+<?php if (!empty($errorMessage)): ?>
+<script>
+    window.onload = function() {
+        alert(<?php echo json_encode($errorMessage); ?>);
+    };
+</script>
+<?php endif; ?>
 </body>
 </html>

@@ -133,19 +133,27 @@ if (!is_array($ingredients)) {
 
     if (empty($errors)) {
     $_SESSION['success_message'] = "Recette modifiée avec succès !";
+    // Correction : autoriser la modification par admin
+    if (!empty($_SESSION['is_admin']) && $_SESSION['is_admin']) {
+        // Correction : encoder ingredients et steps si ce sont des tableaux
+        $ingredients_sql = is_array($ingredients) ? json_encode($ingredients, JSON_UNESCAPED_UNICODE) : $ingredients;
+        $steps_sql = is_array($steps) ? json_encode($steps, JSON_UNESCAPED_UNICODE) : $steps;
+        $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=?");
+        $stmt->execute([$title, $description, $ingredients_sql, $steps_sql, $category_id, $prep_time, $cook_time, $difficulty, $id]);
+    } else {
+        // Correction : encoder ingredients et steps si ce sont des tableaux
+        $ingredients_sql = is_array($ingredients) ? json_encode($ingredients, JSON_UNESCAPED_UNICODE) : $ingredients;
+        $steps_sql = is_array($steps) ? json_encode($steps, JSON_UNESCAPED_UNICODE) : $steps;
+        $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=? AND user_id=?");
+        $stmt->execute([$title, $description, $ingredients_sql, $steps_sql, $category_id, $prep_time, $cook_time, $difficulty, $id, $_SESSION['user_id']]);
         // Correction : autoriser la modification par admin
         if (!empty($_SESSION['is_admin']) && $_SESSION['is_admin']) {
-            // Correction : encoder ingredients et steps si ce sont des tableaux
-            $ingredients_sql = is_array($ingredients) ? json_encode($ingredients, JSON_UNESCAPED_UNICODE) : $ingredients;
-            $steps_sql = is_array($steps) ? json_encode($steps, JSON_UNESCAPED_UNICODE) : $steps;
             $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=?");
-            $stmt->execute([$title, $description, $ingredients_sql, $steps_sql, $category_id, $prep_time, $cook_time, $difficulty, $id]);
+            $stmt->execute([$title, $description, $ingredients, $steps, $category_id, $prep_time, $cook_time, $difficulty, $id]);
         } else {
-            // Correction : encoder ingredients et steps si ce sont des tableaux
-            $ingredients_sql = is_array($ingredients) ? json_encode($ingredients, JSON_UNESCAPED_UNICODE) : $ingredients;
-            $steps_sql = is_array($steps) ? json_encode($steps, JSON_UNESCAPED_UNICODE) : $steps;
             $stmt = $pdo->prepare("UPDATE recipes SET title=?, description=?, ingredients=?, steps=?, category_id=?, prep_time=?, cook_time=?, difficulty=? WHERE id=? AND user_id=?");
-            $stmt->execute([$title, $description, $ingredients_sql, $steps_sql, $category_id, $prep_time, $cook_time, $difficulty, $id, $_SESSION['user_id']]);
+            $stmt->execute([$title, $description, $ingredients, $steps, $category_id, $prep_time, $cook_time, $difficulty, $id, $_SESSION['user_id']]);
+>>>>>>> 027d053 (Initialisation du dépôt local recettes_app)
         }
 
         // --- Synchronisation des tags dans recipe_tags ---
@@ -258,9 +266,8 @@ if (!is_array($ingredients)) {
             }
         }
 
-        if (!empty($success)) {
-            $_SESSION['success_message'] = "Médias ajoutés avec succès.";
-        }
+        // Message de succès général après modification
+        $_SESSION['success_message'] = "Recette modifiée avec succès !";
         header('Location: edit_recipe.php?id='.$id); exit;
     }
 }
@@ -297,6 +304,30 @@ $selected_tags = $selected_tags->fetchAll(PDO::FETCH_COLUMN);
 <?php include 'navbar.php'; ?>
 <div class="container">
     <h1 class="recipe-title-highlight">Modifier la recette : <?php echo htmlspecialchars($recipe['title']); ?></h1>
+    <script>
+        setTimeout(function() { alert(<?php echo json_encode($_SESSION['success_message']); ?>); }, 100);
+    </script>
+    <?php unset($_SESSION['success_message']); ?>
+<?php endif; ?>
+<a class="btn" href="index.php" style="margin:16px 0 8px 0;display:inline-block;">&larr; Retour à l'accueil</a>
+<?php include 'navbar.php'; ?>
+<div class="container">
+    <?php if (!empty($_SESSION['success_message'])): ?>
+        <script>
+            alert(<?php echo json_encode($_SESSION['success_message']); ?>);
+        </script>
+        <?php unset($_SESSION['success_message']); ?>
+    <?php endif; ?>
+    <h1>Modifier la recette</h1>
+<div class="main-actions" style="margin-bottom:18px;display:flex;gap:10px;align-items:center;">
+    <a class="btn" href="index.php">&larr; Retour à l'accueil</a>
+    <a class="btn" href="print_recipe.php?id=<?php echo $id; ?>" target="_blank">🖨️ Imprimer</a>
+    <a class="btn" href="pdf_recipe.php?id=<?php echo $id; ?>" target="_blank">📄 PDF</a>
+    <?php if ((isset($_SESSION['user_id']) && isset($recipe['user_id']) && $_SESSION['user_id'] == $recipe['user_id']) || (!empty($_SESSION['is_admin']) && $_SESSION['is_admin'])): ?>
+        <a href="delete_recipe.php?id=<?php echo $recipe['id']; ?>" onclick="return confirm('Supprimer cette recette ?');" class="btn btn-delete" style="background:#c00;color:#fff;">🗑️ Supprimer</a>
+    <?php endif; ?>
+</div>
+>>>>>>> 027d053 (Initialisation du dépôt local recettes_app)
     <?php if (!empty($errors)) : ?>
         <div class="error"><ul><?php foreach ($errors as $e) echo "<li>$e</li>"; ?></ul></div>
     <?php endif; ?>
@@ -341,147 +372,163 @@ $selected_tags = $selected_tags->fetchAll(PDO::FETCH_COLUMN);
         <textarea id="description" name="description"><?php echo htmlspecialchars($recipe['description']); ?></textarea><br><br>
 
         <label>Ingrédients :</label><br>
-<!-- Select2 CSS -->
-<link href="vendor/select2.min.css" rel="stylesheet">
-<div id="ingredients-group">
-    <select id="ingredient-select" style="width:240px;">
-        <option value="">Choisir un ingrédient</option>
-        <option value="__autre__">Autre...</option>
-        <?php
-        $all_ingredients = $pdo->query('SELECT id, name FROM ingredients ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($all_ingredients as $ing) {
-            echo '<option value="' . htmlspecialchars($ing['id']) . '">' . htmlspecialchars($ing['name']) . '</option>';
-        }
-        ?>
-    </select>
-    <input type="text" id="ingredient-other" placeholder="Nom de l\'ingrédient" style="width:160px;display:none;">
-    <input type="text" id="ingredient-quantity" placeholder="Quantité" style="width:90px;">
-    <select id="ingredient-unit" style="width:180px;"></select>
-<script src="vendor/select2.min.js"></script>
-<script>
-$(document).ready(function() {
-    // Charger dynamiquement les unités depuis units.php
-    function fetchUnits(callback) {
-        $.getJSON('units.php', function(units) {
-            const select = $('#ingredient-unit');
-            select.empty();
-            select.append('<option value="">Unité</option>');
-            units.forEach(function(u) {
-                select.append('<option value="'+u.id+'">'+u.name+'</option>');
-            });
-            if (callback) callback();
-        });
-    }
-    fetchUnits(function() {
-        $('#ingredient-unit').select2({
-            placeholder: "Choisir une unité",
-            allowClear: true,
-            tags: true,
-            language: {
-                noResults: function(params) {
-                    return 'Aucune unité trouvée. Appuyez sur Entrée pour ajouter.';
+        <div id="ingredients-group">
+            <select id="ingredient-select" style="width:240px;">
+                <option value="">Choisir un ingrédient</option>
+                <option value="__autre__">Autre...</option>
+                <?php
+                $all_ingredients = $pdo->query('SELECT id, name FROM ingredients ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($all_ingredients as $ing) {
+                    echo '<option value="' . htmlspecialchars($ing['id']) . '">' . htmlspecialchars($ing['name']) . '</option>';
                 }
-            }
-        });
-    });
-
-    // Ajout dynamique d'une unité
-    $('#ingredient-unit').on('select2:select', function(e) {
-        const data = e.params.data;
-        if (data.id && data._resultId && data._resultId.startsWith('select2-ingredient-unit-result-new-')) {
-            // Nouvelle unité à ajouter
-            $.post('add_unit.php', { name: data.text }, function(resp) {
-                if (resp && resp.id) {
-                    // Ajoute et sélectionne l'unité
-                    const newOption = new Option(resp.name, resp.id, true, true);
-                    $('#ingredient-unit').append(newOption).trigger('change');
+                ?>
+            </select>
+            <input type="text" id="ingredient-other" placeholder="Nom de l'ingrédient" style="width:160px;display:none;">
+            <input type="text" id="ingredient-quantity" placeholder="Quantité" style="width:90px;">
+            <select id="ingredient-unit" style="width:180px;">
+                <option value="">Unité</option>
+                <option value="__autre__">Autre...</option>
+                <?php
+                $all_units = $pdo->query('SELECT name FROM units ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($all_units as $unit) {
+                    echo '<option value="' . htmlspecialchars($unit) . '">' . htmlspecialchars($unit) . '</option>';
                 }
-            }, 'json');
-        }
-    });
-});
-</script>
-    <button type="button" id="add-ingredient">Ajouter</button>
-    <!-- Select2 JS -->
-    <script src="vendor/select2.min.js"></script>
-    <script>
-    // Initialiser Select2 avec recherche dynamique
-    $(document).ready(function() {
-        $('#ingredient-select').select2({
-            placeholder: "Choisir un ingrédient",
-            allowClear: true,
-            width: 'resolve',
-            language: {
-                noResults: function() { return "Aucun ingrédient trouvé"; }
-            }
-        });
-        // Afficher champ texte si "Autre..." sélectionné
-        $('#ingredient-select').on('change', function() {
-            if ($(this).val() === "__autre__") {
-                $('#ingredient-other').show().focus();
-            } else {
-                $('#ingredient-other').hide();
-            }
-        });
-        // Ajout dynamique d'un nouvel ingrédient via AJAX
-        $('#ingredient-other').on('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const name = $(this).val().trim();
-                if (!name) {
-                    alert('Veuillez saisir un nom d\'ingrédient.');
-                    return;
+                ?>
+            </select>
+            <input type="text" id="ingredient-unit-other" placeholder="Autre unité" style="width:90px; display:none;">
+            <button type="button" id="add-ingredient">Ajouter</button>
+            <script src="vendor/select2.min.js"></script>
+            <script>
+            $(document).ready(function() {
+                // Charger dynamiquement les unités depuis units.php
+                function fetchUnits(callback) {
+                    $.getJSON('units.php', function(units) {
+                        const select = $('#ingredient-unit');
+                        select.empty();
+                        select.append('<option value="">Unité</option>');
+                        units.forEach(function(u) {
+                            select.append('<option value="'+u.id+'">'+u.name+'</option>');
+                        });
+                        if (callback) callback();
+                    });
                 }
-                $.post('add_ingredient.php', { name: name }, function(data) {
-                    if (data && data.id) {
-                        // Ajouter l'option dans Select2 et sélectionner
-                        if ($('#ingredient-select option[value="'+data.id+'"').length === 0) {
-                            const newOption = new Option(data.name, data.id, true, true);
-                            $('#ingredient-select').append(newOption).trigger('change');
-                        } else {
-                            $('#ingredient-select').val(data.id).trigger('change');
+                fetchUnits(function() {
+                    $('#ingredient-unit').select2({
+                        placeholder: "Choisir une unité",
+                        allowClear: true,
+                        tags: true,
+                        language: {
+                            noResults: function(params) {
+                                return 'Aucune unité trouvée. Appuyez sur Entrée pour ajouter.';
+                            }
                         }
-                        $('#ingredient-other').val('').hide();
-                        $('#ingredient-select').select2('close');
-                    } else if (data && data.error) {
-                        alert(data.error);
-                    } else {
-                        alert('Erreur lors de l\'ajout de l\'ingrédient.');
-                    }
-                }, 'json').fail(function(xhr) {
-                    alert('Erreur serveur : ' + (xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'inconnue'));
+                    });
                 });
-            }
-        });
-    });
-    </script>
-    <script>
-    // Charger dynamiquement les unités depuis units.php
-    fetch('units.php')
-        .then(r => r.json())
-        .then(units => {
-            const select = document.getElementById('ingredient-unit');
-            units.forEach(u => {
-                const opt = document.createElement('option');
-                opt.value = u.id;
-                opt.textContent = u.name;
-                select.insertBefore(opt, select.querySelector('option[value="__autre__"]'));
+
+                // Ajout dynamique d'une unité
+                $('#ingredient-unit').on('select2:select', function(e) {
+                    const data = e.params.data;
+                    if (data.id && data._resultId && data._resultId.startsWith('select2-ingredient-unit-result-new-')) {
+                        // Nouvelle unité à ajouter
+                        $.post('add_unit.php', { name: data.text }, function(resp) {
+                            if (resp && resp.id) {
+                                // Ajoute et sélectionne l'unité
+                                const newOption = new Option(resp.name, resp.id, true, true);
+                                $('#ingredient-unit').append(newOption).trigger('change');
+                            }
+                        }, 'json');
+                    }
+                });
             });
-        });
-    // Afficher le champ texte si "Autre..." est choisi
-    const unitSelect = document.getElementById('ingredient-unit');
-    const unitOther = document.getElementById('ingredient-unit-other');
-    unitSelect.addEventListener('change', function() {
-        if (unitSelect.value === "__autre__") {
-            unitOther.style.display = '';
-            unitOther.focus();
-        } else {
-            unitOther.style.display = 'none';
-        }
-    });
-    </script>
-    <ul id="ingredient-list"></ul>
-    <?php
+            </script>
+            <script>
+            // Initialiser Select2 avec recherche dynamique
+            $(document).ready(function() {
+                $('#ingredient-select').select2({
+                    placeholder: "Choisir un ingrédient",
+                    allowClear: true,
+                    width: 'resolve',
+                    language: {
+                        noResults: function() { return "Aucun ingrédient trouvé"; }
+                    }
+                });
+                // Afficher champ texte si "Autre..." sélectionné
+                $('#ingredient-select').on('change', function() {
+                    if ($(this).val() === "__autre__") {
+                        $('#ingredient-other').show().focus();
+                    } else {
+                        $('#ingredient-other').hide();
+                    }
+                });
+                // Ajout dynamique d'un nouvel ingrédient via AJAX
+                $('#ingredient-other').on('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const name = $(this).val().trim();
+                        if (!name) {
+                            alert('Veuillez saisir un nom d\'ingrédient.');
+                            return;
+                        }
+                        $.post('add_ingredient.php', { name: name }, function(data) {
+                            if (data && data.id) {
+                                // Ajouter l'option dans Select2 et sélectionner
+                                if ($('#ingredient-select option[value="'+data.id+'"').length === 0) {
+                                    const newOption = new Option(data.name, data.id, true, true);
+                                    $('#ingredient-select').append(newOption).trigger('change');
+                                } else {
+                                    $('#ingredient-select').val(data.id).trigger('change');
+                                }
+                                $('#ingredient-other').val('').hide();
+                                $('#ingredient-select').select2('close');
+                            } else if (data && data.error) {
+                                alert(data.error);
+                            } else {
+                                alert('Erreur lors de l\'ajout de l\'ingrédient.');
+                            }
+                        }, 'json').fail(function(xhr) {
+                            alert('Erreur serveur : ' + (xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'inconnue'));
+                        });
+                    }
+                });
+            });
+            </script>
+            <script>
+            // Mapping id => nom des unités injecté en JS
+            var unitIdToName = <?php echo json_encode($unitIdToName, JSON_UNESCAPED_UNICODE); ?>;
+            // Charger dynamiquement les unités depuis units.php
+            fetch('units.php')
+            .then(r => r.json())
+            .then(units => {
+                const select = document.getElementById('ingredient-unit');
+                // Supprime toutes les options sauf '' et '__autre__' (conserve les deux premières)
+                while (select.options.length > 2) {
+                    select.remove(2);
+                }
+                // Ajoute les unités après '' et 'Autre...'
+                units.forEach(u => {
+                    // Empêche d'ajouter 'Autre...' venant de la base par erreur
+                    if (u.name !== '__autre__') {
+                        const opt = document.createElement('option');
+                        opt.value = u.name;
+                        opt.textContent = u.name;
+                        select.appendChild(opt);
+                    }
+                });
+            });
+            // Afficher le champ texte si "Autre..." est choisi
+            const unitSelect = document.getElementById('ingredient-unit');
+            const unitOther = document.getElementById('ingredient-unit-other');
+            unitSelect.addEventListener('change', function() {
+                if (unitSelect.value === "__autre__") {
+                    unitOther.style.display = '';
+                    unitOther.focus();
+                } else {
+                    unitOther.style.display = 'none';
+                }
+            });
+            </script>
+            <ul id="ingredient-list"></ul>
+            <?php
 // Reconstruire la liste des ingrédients à partir de recipe_ingredients
 $ingredients_arr = [];
 $stmt = $pdo->prepare('SELECT ri.ingredient_id as id, i.name, ri.quantity, u.name as unit
@@ -541,7 +588,12 @@ function updateList() {
     list.innerHTML = '';
     ingredientsArr.forEach((ing, idx) => {
         const li = document.createElement('li');
-        li.textContent = (ing.name ? ing.name : '[Ingrédient #' + (ing.id || '?') + ']') + (ing.quantity ? ' : ' + ing.quantity : '') + (ing.unit ? ' ' + ing.unit : '');
+        // Correction : afficher le nom de l'unité si c'est un id
+        let unitDisplay = ing.unit;
+        if (unitDisplay && /^[0-9]+$/.test(unitDisplay) && unitIdToName[unitDisplay]) {
+            unitDisplay = unitIdToName[unitDisplay];
+        }
+        li.textContent = ing.name + (ing.quantity ? ' : ' + ing.quantity : '') + (unitDisplay ? ' ' + unitDisplay : '');
         const del = document.createElement('button');
         del.textContent = '✗';
         del.style.marginLeft = '10px';
@@ -565,17 +617,49 @@ addBtn.onclick = function() {
     if (select.value === '__autre__' && !name) return;
     if (!id && !name) return;
     let unitVal = unit.value;
-    if (unitVal === "__autre__") unitVal = unitOther.value.trim();
+    if (unitVal === "__autre") unitVal = unitOther.value.trim();
     ingredientsArr.push({ id: id, name: name, quantity: qty.value, unit: unitVal });
+    if (!name) return;
+    // Vérifie doublon
+    if (ingredientsArr.some(e => e.name === name && e.unit === unitVal)) return;
+
+    // Si nouvel ingrédient, l'ajoute dynamiquement à la liste ET à la base
+    if (select.value === '__autre__') {
+        let newOption = new Option(name, name, true, true);
+        $(select).append(newOption).trigger('change');
+        $.ajax({
+            url: 'save_ingredient.php',
+            method: 'POST',
+            data: { name: name },
+            dataType: 'json'
+        });
+    }
+
+    // Si nouvelle unité, l'ajoute dynamiquement à la liste ET à la base
+    if (unit.value === '__autre__' && unitOther.value.trim()) {
+        let newUnit = unitOther.value.trim();
+        let newUnitOption = new Option(newUnit, newUnit, true, true);
+        $(unit).append(newUnitOption).trigger('change');
+        $.ajax({
+            url: 'save_unit.php',
+            method: 'POST',
+            data: { name: newUnit },
+            dataType: 'json'
+        });
+    }
+
+    ingredientsArr.push({name, quantity, unit: unitVal});
+>>>>>>> 027d053 (Initialisation du dépôt local recettes_app)
     updateList();
+    updateHidden();
+    if (select.value === '__autre__') other.value = '';
     qty.value = '';
     unit.value = '';
-    if (select.value === '__autre__') {
-        other.value = '';
-        other.style.display = 'none';
-    }
+    unitOther.value = '';
     select.value = '';
-};
+    $(select).val('').trigger('change');
+    $(unit).val('').trigger('change');
+});
 updateList();
 // Synchronisation finale avant soumission du formulaire
 const form = document.querySelector('form');

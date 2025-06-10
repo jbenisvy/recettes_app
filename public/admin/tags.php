@@ -21,9 +21,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_tag'])) {
     }
 }
 // Suppression d'un tag
+$errorMessage = null;
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    $pdo->prepare('DELETE FROM tags WHERE id = ?')->execute([$_GET['delete']]);
-    header('Location: tags.php'); exit;
+    try {
+        $pdo->prepare('DELETE FROM tags WHERE id = ?')->execute([$_GET['delete']]);
+        header('Location: tags.php'); exit;
+    } catch (PDOException $e) {
+        if ($e->getCode() == '23000' && strpos($e->getMessage(), 'a foreign key constraint fails') !== false) {
+            $errorMessage = "Impossible de supprimer ce tag car il est utilisé dans une ou plusieurs recettes.\nVeuillez d’abord modifier ou supprimer les recettes qui utilisent ce tag.";
+        } else {
+            $errorMessage = "Erreur lors de la suppression : " . htmlspecialchars($e->getMessage());
+        }
+    }
 }
 // Récupérer les tags et le nombre de recettes associées
 $tags = $pdo->query('SELECT t.*, (SELECT COUNT(*) FROM recipe_tags rt WHERE rt.tag_id = t.id) AS recipe_count FROM tags t ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
@@ -117,5 +126,12 @@ if (isset($_POST['edit_tag_id'], $_POST['edit_tag_name'])) {
     </script>
     <a href="dashboard.php" class="btn">&larr; Retour au tableau de bord</a>
 </div>
+<?php if (!empty($errorMessage)): ?>
+<script>
+    window.onload = function() {
+        alert(<?php echo json_encode($errorMessage); ?>);
+    };
+</script>
+<?php endif; ?>
 </body>
 </html>

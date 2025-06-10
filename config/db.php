@@ -2,8 +2,8 @@
 // Configuration de la base de données
 return [
    'host' => 'localhost',
-    'dbname' => 'gestion_des_recettes',
-    'user' => 'root',
-    'pass' => 'VormKIT2025Jeat1!',
+    'dbname' => 'jutx2682_jbenisvy_recettes',
+    'user' => 'jutx2682_jbenisvy_Recettes',
+    'pass' => 'yeelOCALL!stik',
     'charset' => 'utf8mb4'
 ];
