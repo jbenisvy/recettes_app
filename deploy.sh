@@ -1,31 +1,19 @@
-
-
 #!/bin/bash
+# Script de déploiement pour l'application Recettes_Application sur o2switch
+# Ce script met à jour le code sur le serveur distant via SSH et git pull
 
-# === GIT : Validation et push ===
-echo "[1/4] Vérification des modifications locales :"
-git status
+# Variables à personnaliser si besoin
+USER="jutx2682"
+HOST="brome.o2switch.net"
+REMOTE_PATH="public_html/Recettes_Application"
 
-echo "[2/4] Ajout de tous les fichiers modifiés :"
-git add .
+# Commande de déploiement
+ssh "$USER@$HOST" "cd $REMOTE_PATH && git pull origin main"
 
-echo "[3/4] Commit des modifications :"
-GIT_MSG="Refonte sécurité, responsive mobile, debug liste de courses, corrections diverses"
-git commit -m "$GIT_MSG"
-
-echo "[4/4] Push sur GitHub :"
-git push
-
-# === CONFIGURATION ===
-REMOTE_USER="jutx2682"  # Ton identifiant SSH o2switch
-REMOTE_HOST="brome.o2switch.net"  # Adresse SSH de ton hébergement
-REMOTE_DIR="/home2/jutx2682/public_html/Recettes_Application/public"
-LOCAL_DIR="$(pwd)/public"
-
-# === SYNCHRONISATION ===
-rsync -avz --delete \
-  --exclude=".git/" \
-  --exclude=".DS_Store" \
-  "$LOCAL_DIR/" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
-
-echo "Déploiement terminé !"
+# Message de fin
+if [ $? -eq 0 ]; then
+  echo "Déploiement terminé avec succès !"
+else
+  echo "Erreur lors du déploiement. Vérifiez la connexion SSH ou les droits Git."
+  exit 1
+fi
