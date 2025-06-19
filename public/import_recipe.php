@@ -1,4 +1,7 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // Fichier : import_recipe.php
 // Script PHP natif pour importer une recette depuis une URL et pré-remplir le formulaire d'ajout
 // À placer dans public/ ou à la racine selon ton organisation
@@ -61,6 +64,8 @@ $recipe = [
 
 $force_preview = false;
 if (!empty($_POST['ocr_data'])) {
+    
+    
     $ocr = json_decode($_POST['ocr_data'], true);
     file_put_contents('/tmp/debug_ocr_post.txt', print_r($_POST['ocr_data'], true));
     file_put_contents('/tmp/debug_ocr_parsed.txt', print_r($ocr, true));
@@ -72,7 +77,6 @@ if (!empty($_POST['ocr_data'])) {
             foreach ($ocr['ingredients'] as $ing) {
                 if (is_array($ing)) {
                     $parts = [];
-                    if (!empty($ing['quantite'])) $parts[] = $ing['quantite'];
                     if (!empty($ing['unite'])) $parts[] = $ing['unite'];
                     if (!empty($ing['nom'])) $parts[] = $ing['nom'];
                     $str = implode(' ', $parts);
@@ -89,100 +93,11 @@ if (!empty($_POST['ocr_data'])) {
         $recipe['difficulty'] = $ocr['difficulte'] ?? '';
         $recipe['tags'] = $ocr['tags'] ?? [];
         $force_preview = true;
-    }
-}
-
-function extract_between($string, $start, $end) {
-    $string = ' ' . $string;
-    $ini = strpos($string, $start);
-    if ($ini == 0) return '';
-    $ini += strlen($start);
-    $len = strpos($string, $end, $ini) - $ini;
-    return trim(substr($string, $ini, $len));
-}
-
-
->>>>>>> 027d053 (Initialisation du dépôt local recettes_app)
-if (!empty($_POST['url'])) {
-    $url = $_POST['url'];
-    $html = @file_get_contents($url);
-    if ($html) {
-        libxml_use_internal_errors(true);
-        $dom = new DOMDocument();
-        $dom->loadHTML($html);
-        $xpath = new DOMXPath($dom);
-        
-        // Extraction du titre
-        $nodes = $xpath->query('//h1');
-        if ($nodes->length > 0) {
-            $recipe['title'] = trim($nodes->item(0)->nodeValue);
-        }
-        // Description (meta ou p)
-        $nodes = $xpath->query('//meta[@name="description"]');
-        if ($nodes->length > 0) {
-            $recipe['description'] = $nodes->item(0)->getAttribute('content');
-        } else {
-            $nodes = $xpath->query('//p');
-            if ($nodes->length > 0) {
-                $recipe['description'] = trim($nodes->item(0)->nodeValue);
-            }
-        }
-        // Ingrédients (ul/li ou class)
-        $nodes = $xpath->query('//ul[contains(@class,"ingredient") or contains(@id,"ingredient")]/li | //li[contains(@class,"ingredient")]');
-        foreach ($nodes as $li) {
-            $recipe['ingredients'][] = trim($li->nodeValue);
-        }
-        // Extraction spécifique CuisineAZ si aucun ingrédient trouvé
-        if (empty($recipe['ingredients'])) {
-            // Recherche des ingrédients dans les <div> ou <span> qui suivent le header "Ingrédients"
-            $nodes = $xpath->query('//h2[contains(text(),"Ingrédients")]/following-sibling::*');
-            foreach ($nodes as $node) {
-                foreach ($node->getElementsByTagName('*') as $child) {
-                    $txt = trim($child->nodeValue);
-                    if ($txt && strlen($txt) > 2 && stripos($txt, 'Préparation') === false && stripos($txt, 'Ingrédient') === false) {
-                        $recipe['ingredients'][] = $txt;
-                    }
-                }
-            }
-            $recipe['ingredients'] = array_unique($recipe['ingredients']);
-        }
-        // Étapes (ol/li ou class)
-        $nodes = $xpath->query('//ol[contains(@class,"step") or contains(@id,"step")]/li | //li[contains(@class,"step")]');
-        foreach ($nodes as $li) {
-            $recipe['steps'][] = trim($li->nodeValue);
-        }
-        // Image principale
-        $nodes = $xpath->query('//img[contains(@class,"recipe") or contains(@src,"recette")]');
-        if ($nodes->length > 0) {
-            $recipe['image_url'] = $nodes->item(0)->getAttribute('src');
-        }
-        // Catégorie (si présente)
-        $nodes = $xpath->query('//*[contains(@class,"category") or contains(@id,"category")]');
-        if ($nodes->length > 0) {
-            $recipe['category'] = trim($nodes->item(0)->nodeValue);
-        }
-        // Tags
-        $nodes = $xpath->query('//*[contains(@class,"tag") or contains(@id,"tag")]');
-        foreach ($nodes as $tag) {
-            $recipe['tags'][] = trim($tag->nodeValue);
-        }
-        // Temps de préparation/cuisson/difficulté (si présents sous forme de span ou div)
-        $nodes = $xpath->query('//*[contains(@class,"prep") or contains(@id,"prep")]');
-        if ($nodes->length > 0) {
-            $recipe['prep_time'] = trim($nodes->item(0)->nodeValue);
-        }
-        $nodes = $xpath->query('//*[contains(@class,"cook") or contains(@id,"cook")]');
-        if ($nodes->length > 0) {
-            $recipe['cook_time'] = trim($nodes->item(0)->nodeValue);
-        }
-        $nodes = $xpath->query('//*[contains(@class,"diff") or contains(@id,"diff") or contains(@class,"difficulte")]');
-        if ($nodes->length > 0) {
-            $recipe['difficulty'] = trim($nodes->item(0)->nodeValue);
-        }
     } else {
-        $error = "Impossible de télécharger la page. Vérifie l'URL.";
+        echo '<div style="color:red">Erreur : le fichier JSON est invalide.</div>';
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -197,45 +112,30 @@ if (!empty($_POST['url'])) {
     </style>
 </head>
 <body>
-<h1>Importer une recette depuis une URL</h1>
-<form method="post">
-    <label>URL de la recette à importer :</label>
-    <input type="text" name="url" required value="<?php echo isset($_POST['url']) ? htmlspecialchars($_POST['url']) : '' ?>">
-    <button type="submit">Analyser</button>
+<h1>Importer une recette depuis un fichier JSON</h1>
+<form method="post" enctype="multipart/form-data">
+    <label for="recipe_json_file">Importer une recette depuis un fichier JSON :</label>
+    <input type="file" name="recipe_json_file" id="recipe_json_file" accept="application/json">
+    <input type="submit" value="Importer / Prévisualiser recette">
+    <p style="font-size:small; color:#555;">
+      Structure attendue du JSON :<br>
+      <pre style="background:#f8f8f8; border:1px solid #ddd; padding:6px;">
+{
+  "title": "Crêpes faciles",
+  "description": "...",
+  "ingredients": ["250 g farine", "3 œufs", ...],
+  "steps": ["Mélanger...", "Ajouter...", ...],
+  "category": "Dessert",
+  "prep_time": "10 min",
+  "cook_time": "20 min",
+  "difficulty": "Facile",
+  "tags": ["crêpes", "dessert"],
+  "image_url": "https://exemple.com/crepes.jpg"
+}
+      </pre>
+    </p>
 </form>
 <?php if (!empty($error)) { echo '<p style="color:red">'.$error.'</p>'; } ?>
-<<<<<<< HEAD
-<?php if ($recipe['title']): ?>
-    <h2>Prévisualisation de la recette importée</h2>
-    <form method="post" action="add_recipe.php">
-        <label>Titre :</label>
-        <input type="text" name="title" value="<?php echo htmlspecialchars($recipe['title']); ?>">
-
-        <label>Description :</label>
-        <textarea name="description"><?php echo htmlspecialchars($recipe['description']); ?></textarea>
-
-        <label>Catégorie :</label>
-        <input type="text" name="category" value="<?php echo htmlspecialchars($recipe['category']); ?>">
-
-        <label>Ingrédients :</label>
-        <textarea name="ingredients"><?php echo htmlspecialchars(implode("\n", $recipe['ingredients'])); ?></textarea>
-
-        <label>Étapes :</label>
-        <textarea name="steps"><?php echo htmlspecialchars(implode("\n", $recipe['steps'])); ?></textarea>
-
-        <label>Temps de préparation :</label>
-        <input type="text" name="prep_time" value="<?php echo htmlspecialchars($recipe['prep_time']); ?>">
-
-        <label>Temps de cuisson :</label>
-        <input type="text" name="cook_time" value="<?php echo htmlspecialchars($recipe['cook_time']); ?>">
-
-        <label>Difficulté :</label>
-        <input type="text" name="difficulty" value="<?php echo htmlspecialchars($recipe['difficulty']); ?>">
-
-        <label>Tags :</label>
-        <input type="text" name="tags" value="<?php echo htmlspecialchars(implode(", ", $recipe['tags'])); ?>">
-
-=======
 <?php
 // Détection des champs obligatoires manquants
 $missing_fields = [];
@@ -245,6 +145,9 @@ if (empty($recipe['steps'])) $missing_fields[] = 'Étapes';
 if ($recipe['category'] === '') $missing_fields[] = 'Catégorie';
 ?>
 <?php if ($force_preview): ?>
+    <form method="get" action="add_recipe.php" style="margin-bottom:20px;">
+        <button type="submit" style="background:#eee;padding:8px 16px;">&#8592; Retour à l'ajout d'une recette</button>
+    </form>
     <h2>Prévisualisation de la recette importée</h2>
     <?php if (!empty($missing_fields)): ?>
         <div class="alert-missing">
@@ -252,25 +155,18 @@ if ($recipe['category'] === '') $missing_fields[] = 'Catégorie';
             Merci de compléter ces champs avant de valider.
         </div>
     <?php endif; ?>
-    <form method="post" action="add_recipe.php">
+    <form method="post" action="import_recipe.php">
+        <input type="hidden" name="recipe_json" value='<?php echo htmlspecialchars(json_encode($recipe, JSON_UNESCAPED_UNICODE)); ?>'>
         <label<?php if ($recipe['title'] === '') echo ' class="missing-label"'; ?>>Titre :</label>
         <input type="text" name="title" value="<?php echo htmlspecialchars($recipe['title']); ?>"<?php if ($recipe['title'] === '') echo ' class="missing-field"'; ?>>
         <br>
         <label>Description :</label>
-        <textarea name="description"><?php echo htmlspecialchars($recipe['description']); ?></textarea>
+        <textarea name="description" rows="3"><?php echo htmlspecialchars($recipe['description']); ?></textarea>
         <br>
         <label<?php if (empty($recipe['ingredients'])) echo ' class="missing-label"'; ?>>Ingrédients :</label>
-        <ul>
-        <?php if (!empty($recipe['ingredients'])): ?>
-            <?php foreach ($recipe['ingredients'] as $ing): ?>
-                <li><input type="text" name="ingredients[]" value="<?php echo htmlspecialchars($ing); ?>"></li>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <li><input type="text" name="ingredients[]" value="" class="missing-field"></li>
-        <?php endif; ?>
-        </ul>
+        <textarea name="ingredients_text" rows="6" style="width:100%;"<?php if (empty($recipe['ingredients'])) echo ' class="missing-field"'; ?>><?php echo htmlspecialchars(is_array($recipe['ingredients']) ? implode("\n", $recipe['ingredients']) : $recipe['ingredients']); ?></textarea>
         <label<?php if (empty($recipe['steps'])) echo ' class="missing-label"'; ?>>Étapes :</label>
-        <textarea name="steps"<?php if (empty($recipe['steps'])) echo ' class="missing-field"'; ?>><?php echo htmlspecialchars(is_array($recipe['steps']) ? implode("\n", $recipe['steps']) : $recipe['steps']); ?></textarea>
+        <textarea name="steps_text" rows="8" style="width:100%;"<?php if (empty($recipe['steps'])) echo ' class="missing-field"'; ?>><?php echo htmlspecialchars(is_array($recipe['steps']) ? implode("\n", $recipe['steps']) : $recipe['steps']); ?></textarea>
         <br>
         <label<?php if ($recipe['category'] === '') echo ' class="missing-label"'; ?>>Catégorie :</label>
         <input type="text" name="category" value="<?php echo htmlspecialchars($recipe['category']); ?>"<?php if ($recipe['category'] === '') echo ' class="missing-field"'; ?>>
@@ -287,19 +183,39 @@ if ($recipe['category'] === '') $missing_fields[] = 'Catégorie';
         <label>Tags :</label>
         <input type="text" name="tags" value="<?php echo htmlspecialchars(is_array($recipe['tags']) ? implode(", ", $recipe['tags']) : $recipe['tags']); ?>">
         <br>
->>>>>>> 027d053 (Initialisation du dépôt local recettes_app)
         <label>Image principale :</label>
         <?php if ($recipe['image_url']): ?>
             <img src="<?php echo htmlspecialchars($recipe['image_url']); ?>" class="preview-img"><br>
         <?php endif; ?>
         <input type="text" name="image_url" value="<?php echo htmlspecialchars($recipe['image_url']); ?>">
-<<<<<<< HEAD
-
-=======
         <br>
->>>>>>> 027d053 (Initialisation du dépôt local recettes_app)
-        <button type="submit">Créer la recette</button>
+        <button type="submit" name="validate_recipe">Créer la recette</button>
     </form>
 <?php endif; ?>
+
+<?php
+// Traitement de la prévalidation via JSON
+if (isset($_POST['validate_recipe']) && isset($_POST['recipe_json'])) {
+    $recipe = json_decode($_POST['recipe_json'], true);
+    // On écrase les champs édités par l'utilisateur
+    $recipe['title'] = $_POST['title'] ?? $recipe['title'];
+    $recipe['description'] = $_POST['description'] ?? $recipe['description'];
+    $recipe['category'] = $_POST['category'] ?? $recipe['category'];
+    $recipe['prep_time'] = $_POST['prep_time'] ?? $recipe['prep_time'];
+    $recipe['cook_time'] = $_POST['cook_time'] ?? $recipe['cook_time'];
+    $recipe['difficulty'] = $_POST['difficulty'] ?? $recipe['difficulty'];
+    $recipe['image_url'] = $_POST['image_url'] ?? $recipe['image_url'];
+    // Ingrédients et étapes : split sur les retours à la ligne
+    $recipe['ingredients'] = array_filter(array_map('trim', explode("\n", $_POST['ingredients_text'] ?? '')));
+    $recipe['steps'] = array_filter(array_map('trim', explode("\n", $_POST['steps_text'] ?? '')));
+    // Tags : split sur la virgule
+    $recipe['tags'] = array_filter(array_map('trim', explode(',', $_POST['tags'] ?? '')));
+    // Ici tu peux valider ou enregistrer $recipe
+    echo '<pre style="background:#f8f8f8; border:1px solid #ccc; padding:10px;">';
+    echo "Recette validée :\n";
+    print_r($recipe);
+    echo '</pre>';
+}
+?>
 </body>
 </html>
