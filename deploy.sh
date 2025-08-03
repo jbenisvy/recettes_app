@@ -25,7 +25,7 @@ else
 fi
 
 # Étape 3 : Push sur GitHub
-if git log origin/$BRANCH..HEAD --oneline | grep .; then
+if git rev-parse --verify HEAD >/dev/null 2>&1 && git log origin/$BRANCH..HEAD --oneline 2>/dev/null | grep .; then
     git push origin $BRANCH
     echo "Modifications poussées sur GitHub."
 else

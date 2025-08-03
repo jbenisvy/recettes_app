@@ -1,0 +1,47 @@
+<?php
+// gustar_import.php : Importation d'une recette via Gustar.io (URL ou fichier)
+header('Content-Type: application/json');
+
+// Vérification de la méthode
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Méthode non autorisée']);
+    exit;
+}
+
+// Récupération des données
+$url = isset($_POST['url']) ? trim($_POST['url']) : '';
+$fichier = isset($_FILES['file']) ? $_FILES['file'] : null;
+
+if (empty($url) && empty($fichier)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Fournissez une URL ou un fichier']);
+    exit;
+}
+
+// Préparation de la requête vers Gustar.io via RapidAPI
+function gustar_api_request($endpoint, $postfields = null, $is_file = false) {
+    $curl = curl_init();
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'X-Rapidapi-Key: c0cfd85bc2mshed53825c3d09c4dp1bacc9jsn7f1dc36ec02b',
+            'X-Rapidapi-Host: gustar-io-deutsche-rezepte.p.rapidapi.com'
+        ],
+        CURLOPT_POSTFIELDS => json_encode($data)
+    ]);
+    $response = curl_exec($ch);
+    if (curl_errno($ch)) {
+        echo json_encode(['error' => curl_error($ch)]);
+    } else {
+        echo $response;
+    }
+    curl_close($ch);
+    exit;
+}
+
+echo json_encode(['error' => 'Aucune URL fournie']);
+
+$recipe = map_gustar_to_recipe($api_response);
+echo json_encode($recipe, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
