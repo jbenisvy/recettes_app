@@ -1,0 +1,44 @@
+// JS pour la sélection multiple d'ingrédients sur la page de recherche
+
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('ingredient-autocomplete');
+    const selectedDiv = document.getElementById('selected-ingredients');
+    const datalist = document.getElementById('ingredients-list');
+
+    // Ajouter un ingrédient
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && input.value.trim() !== '') {
+            e.preventDefault();
+            addTag(input.value.trim());
+            input.value = '';
+        }
+    });
+
+    // Ajouter si on clique sur une suggestion
+    input.addEventListener('change', function(e) {
+        if (input.value.trim() !== '') {
+            addTag(input.value.trim());
+            input.value = '';
+        }
+    });
+
+    // Gestion de la suppression d'un tag
+    selectedDiv.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-tag')) {
+            e.preventDefault();
+            const value = e.target.getAttribute('data-value');
+            const span = e.target.closest('.ingredient-tag');
+            if (span) span.remove();
+        }
+    });
+
+    function addTag(val) {
+        // Ne pas ajouter deux fois le même ingrédient
+        if ([...selectedDiv.querySelectorAll('input[name="ingredients[]"]')].some(i => i.value === val)) return;
+        const span = document.createElement('span');
+        span.className = 'ingredient-tag';
+        span.innerHTML = `${val} <button type="button" class="remove-tag" data-value="${val}">×</button>` +
+            `<input type="hidden" name="ingredients[]" value="${val}">`;
+        selectedDiv.appendChild(span);
+    }
+});

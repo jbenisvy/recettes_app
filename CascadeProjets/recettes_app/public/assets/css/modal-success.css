@@ -1,0 +1,23 @@
+.modal-success-bg {
+  position: fixed; z-index: 9999; top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(44,124,123,0.32); display: flex; align-items: center; justify-content: center;
+}
+.modal-success {
+  background: #fff; border-radius: 16px; box-shadow: 0 4px 32px #2c7c7b33;
+  padding: 32px 36px; min-width: 320px; max-width: 90vw; text-align: center;
+  font-family: 'Poppins', sans-serif; color: #2c7c7b;
+}
+.modal-success h2 {
+  margin-top: 0; font-size: 2em; color: #2c7c7b;
+}
+.modal-success .modal-btn {
+  margin-top: 24px; padding: 10px 32px; background: #2c7c7b; color: #fff;
+  border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; font-weight: bold;
+  transition: background 0.18s;
+}
+.modal-success .modal-btn:hover {
+  background: #21605f;
+}
+.modal-success .modal-icon {
+  font-size: 3em; margin-bottom: 10px; display: block;
+}

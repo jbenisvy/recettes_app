@@ -1,0 +1,112 @@
+/* Styles pour la page de profil utilisateur */
+.profile-container {
+    background: white;
+    border-radius: var(--border-radius, 10px);
+    box-shadow: var(--box-shadow, 0 2px 8px rgba(0,0,0,0.06));
+    max-width: 600px;
+    width: 100%;
+    margin: 2rem auto;
+    padding: 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.profile-form {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.profile-form input[type="text"],
+.profile-form input[type="email"],
+.profile-form input[type="file"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin-bottom: 1.2rem;
+    padding: 0.8rem;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+    display: block;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 1.5rem;
+    border: 3px solid #e0e0e0;
+    background: #f8f8f8;
+}
+.profile-form input[type="text"],
+.profile-form input[type="email"],
+.profile-form input[type="file"] {
+    width: 100%;
+    margin-bottom: 1.2rem;
+    padding: 0.8rem;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+    display: block;
+}
+
+.profile-form label {
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+    display: block;
+    text-align: left;
+}
+
+.profile-form .admin-checkbox {
+    margin: 1rem 0 1.5rem 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+}
+
+.profile-form .btn {
+    margin-top: 0.5rem;
+    width: 100%;
+    padding: 0.9rem;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 600px) {
+    .profile-container {
+        padding: 1rem 0.5rem;
+    }
+    .profile-form input,
+    .profile-form label,
+    .profile-form .btn {
+        font-size: 1rem;
+    }
+}
+.profile-form label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+.profile-form .btn {
+    margin-top: 1rem;
+    width: 100%;
+    padding: 0.8rem;
+}
+.profile-form .admin-checkbox {
+    margin: 1rem 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.success, .error {
+    margin-bottom: 1rem;
+    padding: 0.8rem 1rem;
+    border-radius: 5px;
+}
+.success { background: #e5fbe5; color: #217a21; }
+.error { background: #ffeaea; color: #c91d1d; }

@@ -1,0 +1,12 @@
+.recipe-title-highlight {
+    background: #f5f7fa;
+    color: #2d7c7b;
+    border-left: 6px solid #2d7c7b;
+    padding: 8px 18px;
+    font-size: 2.1em;
+    margin-bottom: 16px;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px #0001;
+    font-weight: bold;
+    letter-spacing: .5px;
+}

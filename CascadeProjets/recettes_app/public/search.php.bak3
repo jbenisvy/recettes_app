@@ -1,0 +1,137 @@
+<?php
+session_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Connexion à la base de données
+require_once __DIR__ . '/../config/db.php';
+$db = require __DIR__ . '/../config/db.php';
+
+try {
+    $dsn = "mysql:host={$db['host']};dbname={$db['dbname']}";
+    $pdo = new PDO($dsn, $db['user'], $db['pass']);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->exec("SET NAMES utf8mb4");
+} catch (PDOException $e) {
+    die('Erreur de connexion à la base de données : ' . $e->getMessage());
+}
+
+// Récupérer les catégories pour le filtre
+$categories = $pdo->query("SELECT * FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+
+// Construire la requête de recherche
+$search = $_GET['q'] ?? '';
+$category = $_GET['category'] ?? '';
+$difficulty = $_GET['difficulty'] ?? '';
+
+$where = [];
+$params = [];
+
+if (!empty($search)) {
+    $where[] = "(r.title LIKE ? OR r.description LIKE ? OR i.name LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+}
+
+if (!empty($category)) {
+    $where[] = "r.category_id = ?";
+    $params[] = $category;
+}
+
+if (!empty($difficulty)) {
+    $where[] = "r.difficulty = ?";
+    $params[] = $difficulty;
+}
+
+$whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
+$query = "SELECT DISTINCT r.*, u.username, c.name as category_name 
+          FROM recipes r 
+          LEFT JOIN users u ON r.user_id = u.id 
+          LEFT JOIN categories c ON r.category_id = c.id 
+          LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id 
+          LEFT JOIN ingredients i ON ri.ingredient_id = i.id 
+          $whereClause 
+          ORDER BY r.created_at DESC";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
+$recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Préparer le contenu de la page
+$pageTitle = "Recherche de recettes";
+ob_start(); 
+?>
+
+<div class="search-section">
+    <h1>Rechercher une recette</h1>
+    <form method="GET" class="search-form">
+        <div class="search-inputs">
+            <input type="text" name="q" placeholder="Rechercher une recette..." value="<?php echo htmlspecialchars($search); ?>">
+            <select name="category">
+                <option value="">Toutes les catégories</option>
+                <?php foreach ($categories as $cat): ?>
+                    <option value="<?php echo $cat['id']; ?>" <?php echo ($category == $cat['id'] ? 'selected' : ''); ?>>
+                        <?php echo htmlspecialchars($cat['name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <select name="difficulty">
+                <option value="">Toutes les difficultés</option>
+                <option value="Facile" <?php echo ($difficulty === 'Facile' ? 'selected' : ''); ?>>Facile</option>
+                <option value="Moyenne" <?php echo ($difficulty === 'Moyenne' ? 'selected' : ''); ?>>Moyenne</option>
+                <option value="Difficile" <?php echo ($difficulty === 'Difficile' ? 'selected' : ''); ?>>Difficile</option>
+            </select>
+            <button type="submit">Rechercher</button>
+        </div>
+    </form>
+</div>
+
+<div class="search-results">
+    <?php if (!empty($search) || !empty($category) || !empty($difficulty)): ?>
+        <h2><?php echo count($recipes); ?> résultat(s) trouvé(s)</h2>
+    <?php endif; ?>
+
+    <div class="recipes-grid">
+        <?php foreach ($recipes as $recipe): ?>
+            <div class="recipe-card">
+                <?php
+                // Récupérer la première image de la recette
+                $stmt = $pdo->prepare("SELECT file_path FROM recipe_media WHERE recipe_id = ? AND media_type = 'image' LIMIT 1");
+                $stmt->execute([$recipe['id']]);
+                $image = $stmt->fetch(PDO::FETCH_COLUMN);
+                ?>
+                <div class="recipe-image">
+                    <?php if ($image): ?>
+                        <img src="<?php echo htmlspecialchars($image); ?>" alt="<?php echo htmlspecialchars($recipe['title']); ?>">
+                    <?php else: ?>
+                        <img src="images/default-recipe.jpg" alt="Image par défaut">
+                    <?php endif; ?>
+                </div>
+                <div class="recipe-content">
+                    <h3><?php echo htmlspecialchars($recipe['title']); ?></h3>
+                    <div class="recipe-meta">
+                        <span class="category"><?php echo htmlspecialchars($recipe['category_name']); ?></span>
+                        <span class="difficulty"><?php echo htmlspecialchars($recipe['difficulty']); ?></span>
+                    </div>
+                    <p class="recipe-description"><?php echo substr(htmlspecialchars($recipe['description']), 0, 100) . '...'; ?></p>
+                    <div class="recipe-footer">
+                        <span class="author">par <?php echo htmlspecialchars($recipe['username']); ?></span>
+                        <a href="recipe.php?id=<?php echo $recipe['id']; ?>" class="view-recipe">Voir la recette</a>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
+<?php
+$pageContent = ob_get_clean();
+
+// Inclure les styles spécifiques
+$additionalCss = ["css/search.css"];
+
+// Inclure le template de base
+require 'templates/base.php';
+?>
